@@ -92,6 +92,7 @@ func getProduct(c *gin.Context, db *database_folder.DB) {
 
 	c.HTML(http.StatusOK, "product_page.html", gin.H{
 		"Product": product_info,
+		"Title":   "Каталог",
 	})
 }
 
