@@ -27,6 +27,10 @@
 
     {{ template "product" }}
 
+<script>
+window.__ACTIVE_PRODUCT__ = {{ .Product | toJson }};
+</script>
+
 <script type="module" src="/statics/js/main.js"></script>
 </body>
 

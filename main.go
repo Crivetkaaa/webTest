@@ -127,6 +127,10 @@ func setupRoutes(r *gin.Engine, db *database_folder.DB) {
 		getProductAPI(ctx, db)
 	})
 
+	api.POST("/orders", func(ctx *gin.Context) {
+
+	})
+
 	r.GET("/", func(ctx *gin.Context) {
 		d, err := db.GetType()
 		if err != nil || d == "" {
