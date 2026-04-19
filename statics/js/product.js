@@ -41,6 +41,7 @@ export function openProductModal(product, prev = "/") {
 
     renderThumbnails(photos);
     renderCharacteristics(product.Characteristic);
+    renderVariants(product.Variants);
 
     modal.style.display = "block";
 }
@@ -131,4 +132,31 @@ function renderCharacteristics(data) {
             </tbody>
         </table>
     `;
+}
+
+// -------------------------
+// VARIANTS (SELECT)
+// -------------------------
+function renderVariants(variants) {
+    const select = document.getElementById("volume-select");
+    if (!select || !variants) return;
+
+    const values = variants.Value || [];
+    const prices = variants.Price || [];
+    const unit = variants.Unit || "";
+
+    if (values.length === 0) {
+        select.innerHTML = "";
+        return;
+    }
+
+    select.innerHTML = values.map((v, i) => {
+        const price = prices[i] ?? 0;
+
+        return `
+            <option value="${v}">
+                ${v} ${unit} — ${price} ₽
+            </option>
+        `;
+    }).join("");
 }
