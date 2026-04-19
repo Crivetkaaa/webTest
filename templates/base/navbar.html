@@ -1,0 +1,26 @@
+{{ define "navbar" }}
+<nav class="main-nav">
+    <div class="nav-container">
+        <div class="nav-spacer"></div> <!-- Пустышка для баланса -->
+        
+        <div id="nav-container" class="nav-links">
+            {{ range .BigNavbar }}
+                <a href="/{{ .Slug }}">
+                    {{ .Name }}
+                </a>
+            {{ end }}
+        </div>
+        
+        <div class="nav-actions">
+    <div class="search-wrapper">
+        <input type="text" id="search-input" placeholder="Поиск товаров..." class="search-field">
+        <button class="search-btn" id="search-trigger">
+            <svg xmlns="http://w3.org" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+    </div>
+</div>
+
+    </div>
+</nav>
+
+{{ end }}

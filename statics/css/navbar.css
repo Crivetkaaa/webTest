@@ -1,0 +1,159 @@
+
+/* Навигация */
+.main-nav {
+    width: 100%;
+    padding: 15px 0;
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+    justify-content: center;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between; /* Распределяет: лево, центр, право */
+    align-items: center;
+    padding: 0 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.nav-container a {
+    text-decoration: none;
+    color: #333;
+    font-size: 16px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.3s;
+    text-align: center;
+}
+
+.nav-container a:hover {
+    color: #888;
+}
+
+.nav-item {
+    position: relative;
+    display: inline-block;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between; /* Ссылки слева, поиск справа */
+    align-items: center;
+    padding: 0 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.nav-spacer, 
+.nav-actions {
+    flex: 1; /* Занимают равное пространство */
+    display: flex;
+}
+
+.nav-actions {
+    justify-content: flex-end; /* Смещает иконку поиска в самый край */
+}
+
+.search-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: #333;
+    transition: color 0.3s, transform 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.search-btn:hover {
+    color: #000;
+    transform: scale(1.1);
+}
+
+.nav-links {
+    display: flex;
+    gap: 40px; /* Расстояние между категориями */
+    justify-content: center;
+    flex: 2; /* Даем центральному блоку больше места */
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #333;
+    font-size: 16px;
+    font-weight: 500;
+    text-transform: uppercase;
+    white-space: nowrap; /* Чтобы категории не переносились */
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.search-field {
+    width: 0;
+    opacity: 0;
+    border: none;
+    border-bottom: 1px solid #333;
+    outline: none;
+    padding: 5px 0;
+    transition: all 0.4s ease; /* Плавная анимация */
+    font-size: 14px;
+    background: transparent;
+}
+
+/* Класс, который мы будем добавлять через JS */
+.search-field.active {
+    width: 200px; /* Ширина развернутой строки */
+    opacity: 1;
+    margin-right: 10px;
+}
+
+@media (max-width: 768px) {
+    .nav-container {
+        display: flex;
+        justify-content: center; /* Центрируем содержимое */
+        position: relative;
+        padding: 0 15px;
+    }
+
+    .nav-spacer {
+        display: none; /* Убираем левый отступ */
+    }
+
+    .nav-links {
+        flex: 0 1 auto; /* Блок занимает только столько места, сколько нужно тексту */
+        justify-content: center;
+        gap: 15px;
+        margin: 0 auto; /* Гарантирует центр */
+    }
+
+    .nav-actions {
+        position: absolute; /* Вырываем поиск из потока */
+        right: 15px;       /* Прижимаем строго к правому краю контейнера */
+        top: 50%;
+        transform: translateY(-50%); /* Центрируем иконку по вертикали */
+        flex: none;
+    }
+
+    /* Адаптация инпута, чтобы он не ломал центр при активации */
+    .search-field.active {
+        position: absolute;
+        right: 0;
+        
+        top: 50%;
+        transform: translateY(-50%);
+        width: calc(100vw - 70px); /* Почти вся ширина экрана */
+        background: white;
+        z-index: 100;
+        font-size: 16px !important;
+        border-radius: 0; 
+    }
+    
+}
+

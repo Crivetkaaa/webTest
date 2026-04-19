@@ -1,0 +1,344 @@
+/* .modal-left,
+.modal-main-container {
+    min-width: 0;
+} */
+/* =========================
+   МОДАЛКА ТОВАРА
+   ========================= */
+
+.product-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(255, 255, 255);
+    z-index: 10000;
+}
+
+.product-modal-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 80px 20px 40px;
+    box-sizing: border-box;
+}
+
+/* Кнопка закрытия */
+.product-close {
+    position: fixed;
+    top: 25px;
+    right: 35px;
+    font-size: 45px;
+    font-weight: 200;
+    cursor: pointer;
+    z-index: 10001;
+    line-height: 1;
+}
+
+/* =========================
+   LAYOUT
+   ========================= */
+
+.modal-layout {
+    display: flex;
+    max-width: fit-content;
+    margin: 0 auto;
+    /* margin-right: 400px; */
+    align-items: center;
+    gap: 120px;
+}
+
+/* =========================
+   LEFT (галерея)
+   ========================= */
+
+.modal-left {
+    display: flex;
+    flex-direction: row-reverse;
+    flex: 1 1 auto;
+    min-width: 0;   /* критично */
+}
+
+/* миниатюры */
+/* ЛЕВАЯ КОЛОНКА — миниатюры */
+.modal-thumbnails {
+    flex: 0 0 90px ;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.modal-thumbnails::-webkit-scrollbar {
+    display: none;
+}
+
+.modal-thumbnail {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: 0.2s;
+}
+
+.modal-thumbnail.active {
+    border: 1px solid #000;
+    outline: 2px solid #000;
+    outline-offset: -2px;
+    border-radius: 10px;
+}
+
+/* главное фото */
+.modal-main-container {
+    flex: 1;
+    min-width: 0;   /* критично */
+    max-width: fit-content;
+    display: flex;
+    justify-content: flex-start;
+    gap: 100000px;
+}
+
+.modal-main-image {
+    max-height: 80vh;
+    object-fit: contain;
+    display: block;
+}
+
+/* =========================
+   RIGHT (информация)
+   ========================= */
+
+.modal-right {
+    flex: 0 0 380px;   /* ВАЖНО: фиксируем колонку */
+    max-width: 380px;
+    min-width: 320px;
+
+    position: sticky;
+    top: 20px;
+}
+
+/* заголовок */
+#modal-title {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* описание */
+.description-text {
+    font-size: 15px;
+    color: #555;
+    margin: 20px 0;
+    padding-top: 15px;
+}
+
+/* select */
+.volume-select {
+    width: 100%;
+    padding: 15px;
+    font-size: 14px;
+    border: 1px solid #000;
+    margin-bottom: 20px;
+    background: #fff;
+}
+
+/* кнопка */
+.product_button {
+    width: 100%;
+    background: #000;
+    color: #fff;
+    padding: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+}
+
+.product_button:hover {
+    background: #333;
+}
+
+/* =========================
+   ТАБЛИЦА (ВАЖНО)
+   ========================= */
+
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 25px;
+}
+
+.custom-table tr {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.custom-table td {
+    font-size: 14px;
+    padding: 0;
+}
+
+/* левый столбец */
+.custom-table td:first-child {
+    flex: 1;
+    text-align: left;
+    font-weight: 600;
+    color: #888;
+}
+
+/* правый столбец */
+.custom-table td:last-child {
+    flex: 1;
+    text-align: right;
+    color: #222;
+    word-break: break-word;
+}
+
+/* =========================
+   MOBILE
+   ========================= */
+@media (max-width: 900px) {
+
+    /* =========================
+       ОБЩИЙ КОНТЕЙНЕР
+       ========================= */
+    .modal-layout {
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .modal-right {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        align-items: stretch;   /* ВАЖНО */
+    }
+
+    /* =========================
+       ГАЛЕРЕЯ
+       ========================= */
+    .modal-left {
+        width: fit-content;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* главное фото */
+    .modal-main-container {
+        width: fit-content;
+        display: flex;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .modal-main-image {
+        width: 100%;
+        max-height: 65vh;
+        object-fit: contain;
+    }
+
+    /* миниатюры */
+    .modal-thumbnails {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        overflow-x: auto;
+        width: 100%;
+        padding: 10px 0;
+        justify-content: center;
+    }
+
+    .modal-thumbnail {
+        width: 70px;
+        height: 85px;
+        flex: 0 0 auto;
+    }
+
+    /* =========================
+       ТЕКСТ
+       ========================= */
+
+    #modal-title {
+        font-size: 22px;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .description-text {
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 10px 0;
+    }
+
+    /* =========================
+       ТАБЛИЦА (СТАБИЛЬНАЯ ВЕРСИЯ)
+       ========================= */
+
+    .custom-table {
+        width: 100%;
+        margin-top: 10px;
+        border-collapse: collapse;
+    }
+
+    .custom-table tr {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .custom-table td {
+        padding: 0;
+        font-size: 14px;
+    }
+
+    .custom-table td:first-child {
+        text-align: left;
+        color: #888;
+        font-weight: 600;
+    }
+
+    .custom-table td:last-child {
+        text-align: right;
+        color: #222;
+    }
+
+    /* =========================
+       SELECT
+       ========================= */
+
+    .volume-select {
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    /* =========================
+       КНОПКА / ЦЕНА
+       ========================= */
+
+    .product_button {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    /* =========================
+       КРЕСТИК
+       ========================= */
+
+    .product-close {
+        top: 15px;
+        right: 15px;
+        font-size: 32px;
+    }
+}

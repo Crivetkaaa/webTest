@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {{ template "head" . }}
+</head>
+
+<body>
+    {{ template "cart" }}
+    {{ template "navbar" . }}
+    {{ template "text" . }}
+
+
+
+    <div class="products text" id="mini-navbar"></div>
+
+    <div id="search-controls" style="display: none;" class="products text"></div>
+
+    <div class="products_card" id="products-container"></div>
+
+    <div class="button-container">
+        <div id="scroll-anchor"></div>
+        <button id="load-more" data-href="/api/get_more">
+            Показать больше
+        </button>
+    </div>
+
+    {{ template "product" }}
+
+<script type="module" src="/statics/js/main.js"></script>
+</body>
+
+</html>

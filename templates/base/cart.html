@@ -1,0 +1,31 @@
+{{ define "cart" }}
+<div id="cart-icon">
+    🛒 <span id="cart-count">0</span>
+</div>
+
+<div id="cart-modal" class="cart-modal">
+    <div class="cart-modal-content">
+        <span class="cart-close">&times;</span>
+        <h2>Ваш заказ</h2>
+        
+        <div id="cart-items">Корзина пуста</div>
+
+        <div class="cart-total">
+            Итого: <span id="cart-total">0</span> р.
+        </div>
+
+        <form id="order-form">
+            <label>Ваше имя</label>
+            <input type="text" name="name" placeholder="Введите имя" required>
+
+            <label>Ваш телефон</label>
+            <input type="tel" name="phone" placeholder="+7 (000) 000-00-00" required>
+
+            <label>Комментарий</label>
+            <textarea name="comment" rows="3" placeholder="Ваш комментарий"></textarea>
+
+            <button type="submit" class="checkout-button">Оформить заказ</button>
+        </form>
+    </div>
+</div>
+{{ end }}
