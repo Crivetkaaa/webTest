@@ -20,6 +20,9 @@ func CreateDB() (*DB, error) {
 	if err := generateTables(database); err != nil {
 		return nil, err
 	}
+	if err := addBaseCategory(database); err != nil {
+		return nil, err
+	}
 
 	return database, nil
 }
@@ -32,4 +35,17 @@ func generateTables(db *DB) error {
 
 	_, err = db.Db.Exec(string(queryBytes))
 	return err
+}
+
+func addBaseCategory(db *DB) error {
+	queryBates, err := os.ReadFile("database_folder/baseCategory.sql")
+	if err != nil {
+		return err
+	}
+	_, err = db.Db.Exec(string(queryBates))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

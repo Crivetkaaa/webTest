@@ -6,6 +6,7 @@ var photos = []string{
 }
 
 type Variant struct {
+	Id    []int
 	Value []int
 	Price []int
 	Unit  string
@@ -34,4 +35,25 @@ type BonusInfoProduct struct {
 	Characteristic []map[string]string
 	Photo          []string
 	Variants       Variant
+}
+
+type OrderItem struct {
+	ID        int     `json:"id"`         // Ожидает "id"
+	VariantID int     `json:"variant_id"` // Ожидает "variant_id"
+	Name      string  `json:"name"`
+	Price     float64 `json:"price"`
+	Qty       int     `json:"quantity"` // Ожидает "quantity"
+}
+
+type OrderData struct {
+	Customer  CustomerInfo `json:"customer"`
+	Items     []OrderItem  `json:"items"`
+	Total     string       `json:"total"`
+	CreatedAt string       `json:"createdAt"`
+}
+
+type CustomerInfo struct {
+	Name    string `json:"name"`    // соответствует name="name" в HTML-форме
+	Phone   string `json:"phone"`   // соответствует name="phone"
+	Comment string `json:"comment"` // соответствует name="comment"
 }

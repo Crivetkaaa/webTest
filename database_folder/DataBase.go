@@ -2,6 +2,7 @@ package database_folder
 
 import (
 	"database/sql"
+	"fmt"
 	"webTest/struct_folder"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -222,7 +223,7 @@ func (db *DB) getPhoto(productSlug string, pi *struct_folder.BonusInfoProduct) e
 }
 
 func (db *DB) getVariants(productSlug string, pi *struct_folder.BonusInfoProduct) error {
-	query := `SELECT pv.value, pv.price, pv.unit
+	query := `SELECT pv.id, pv.value, pv.price, pv.unit
         FROM product_variants pv
         JOIN products p ON pv.product_id = p.id
         WHERE p.slug = ?
@@ -235,24 +236,28 @@ func (db *DB) getVariants(productSlug string, pi *struct_folder.BonusInfoProduct
 	defer rows.Close()
 
 	pi.Variants = struct_folder.Variant{
+		Id:    []int{},
 		Value: []int{},
 		Price: []int{},
 	}
 
 	for rows.Next() {
+		var id int
 		var val int
 		var pr int
 		var unit string
 
-		err := rows.Scan(&val, &pr, &unit)
+		err := rows.Scan(&id, &val, &pr, &unit)
 		if err != nil {
 			return err
 		}
 
 		pi.Variants.Unit = unit
+		pi.Variants.Id = append(pi.Variants.Id, id)
 		pi.Variants.Price = append(pi.Variants.Price, pr)
 		pi.Variants.Value = append(pi.Variants.Value, val)
 	}
+	fmt.Println(pi.Variants.Id)
 	return nil
 }
 
@@ -374,4 +379,72 @@ func (db *DB) GetProduct(productSlug string) (struct_folder.Product, error) {
 
 	return products, nil
 
+}
+
+func (db *DB) InsertOrder(info struct_folder.OrderData) error {
+	tx, err := db.Db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Откат при любой ошибке
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// =========================
+	// 1. Пользователь
+	// =========================
+	var userID int
+	err = tx.QueryRow(`SELECT id FROM users WHERE phone = ?`, info.Customer.Phone).Scan(&userID)
+
+	if err != nil {
+		res, errExec := tx.Exec(`INSERT INTO users(phone, name) VALUES (?, ?)`,
+			info.Customer.Phone, info.Customer.Name)
+		if errExec != nil {
+			err = errExec
+			return err
+		}
+		lastID, _ := res.LastInsertId()
+		userID = int(lastID)
+	}
+
+	// =========================
+	// 2. Заказ (Сначала создаем запись в orders!)
+	// =========================
+	// ВАЖНО: Мы вставляем в таблицу orders, а не order_items
+	res, err := tx.Exec(`
+		INSERT INTO orders(user_id, comment, total_price) 
+		VALUES (?, ?, ?)
+	`, userID, info.Customer.Comment, info.Total)
+
+	if err != nil {
+		return err
+	}
+
+	orderID64, _ := res.LastInsertId()
+	orderID := int(orderID64)
+
+	// =========================
+	// 3. Товары в заказе
+	// =========================
+	for _, item := range info.Items {
+		// ОШИБКА БЫЛА ТУТ: Заменяем item.ID (0) на item.VariantID (3)
+		_, err = tx.Exec(`
+			INSERT INTO order_items(order_id, variant_id, quantity, price_at_purchase)
+			VALUES (?, ?, ?, ?)
+		`, orderID, item.VariantID, item.Qty, item.Price)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	// =========================
+	// 4. Коммит
+	// =========================
+	err = tx.Commit()
+	return err
 }

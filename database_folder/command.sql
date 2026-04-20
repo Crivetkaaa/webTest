@@ -67,22 +67,35 @@ CREATE TABLE IF NOT EXISTS product_attributes (
     FOREIGN KEY (characteristic_id) REFERENCES characteristics(id) ON DELETE CASCADE
 );
 
--- 9. Пользователи
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    full_name TEXT NOT NULL,
-    phone TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 10. Заказы
+-- 10. Заказы (Исправлено: убран variant_id)
 CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    variant_id INTEGER NOT NULL,
     comment TEXT,
+    total_price INTEGER NOT NULL, -- Общая сумма заказа
     status TEXT DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 11. Состав заказа (НОВАЯ ТАБЛИЦА)
+CREATE TABLE IF NOT EXISTS order_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    variant_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    price_at_purchase INTEGER NOT NULL, -- Фиксируем цену на момент покупки!
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
+);
+-- 12. Пользователь
+CREATE TABLE IF NOT EXISTS users(
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	phone TEXT UNIQUE,
+	name TEXT
+	);
+
+CREATE TABLE IF NOT EXISTS administrator (
+    login TEXT,
+    password Text
 );

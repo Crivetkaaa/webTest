@@ -144,6 +144,7 @@ function renderVariants(variants) {
     const values = variants.Value || [];
     const prices = variants.Price || [];
     const unit = variants.Unit || "";
+    const id = variants.Id || [];
 
     if (values.length === 0) {
         select.innerHTML = "";
@@ -154,7 +155,7 @@ function renderVariants(variants) {
         const price = prices[i] ?? 0;
         // Сохраняем чистую цену в data-price для JS
         return `
-            <option value="${v}" data-price="${price}">
+            <option value="${v}" data-price="${price}" data-id="${id[i]}">
                 ${v} ${unit} — ${price} ₽
             </option>
         `;
@@ -244,18 +245,18 @@ document.addEventListener('click', (e) => {
         }
 
         const selectedOption = select.options[select.selectedIndex];
-        
+        console.log(selectedOption)
         // Собираем данные
-        const productData = {
-            // Берем название и картинку прямо из модалки
-            title: document.getElementById("modal-title").textContent,
-            image: currentPhoto,
-            url: window.location.pathname,
-            // Данные из селекта (теперь берутся корректно)
-            volume: selectedOption.value, 
-            price: parseInt(selectedOption.dataset.price) || 0,
-            quantity: 1
-        };
+const productData = {
+    // Получаем ID варианта из data-id выбранного option
+    variant_id: parseInt(selectedOption.getAttribute("data-id")), 
+    title: document.getElementById("modal-title").textContent,
+    image: currentPhoto,
+    url: window.location.pathname,
+    volume: selectedOption.value, 
+    price: parseInt(selectedOption.dataset.price) || 0,
+    quantity: 1
+};
 
         // Сохранение
         let cart = JSON.parse(localStorage.getItem("cart")) || [];
