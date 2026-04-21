@@ -198,9 +198,11 @@ function renderOrders(orders, append = false) {
             <td>${o.OrdersInfo.CustomerName}</td>
             <td>${o.OrdersInfo.Phone}</td>
             <td>
-                <span class="status-badge status-${o.OrdersInfo.Status}">
-                    ${statusTranslations[o.OrdersInfo.Status] || o.OrdersInfo.Status}
-                </span>
+<span 
+    class="status-badge status-${o.OrdersInfo.Status}" 
+    data-id="${o.OrdersInfo.Id}">
+    ${statusTranslations[o.OrdersInfo.Status] || o.OrdersInfo.Status}
+</span>
             </td>
             <td class="font-bold">${o.OrdersInfo.TotalPrice} ₽</td>
         </tr>`;
@@ -259,9 +261,32 @@ async function updateStatus() {
 
         if (response.ok) {
             closeModal();
-            fetchOrders(true); // Перезагружаем список, чтобы статус обновился и сработал текущий фильтр
+
+            // 🔥 обновляем UI без перезагрузки
+            const badge = document.querySelector(
+                `.status-badge[data-id="${orderId}"]`
+            );
+
+            if (badge) {
+                // убираем старые классы статуса
+                badge.classList.remove(
+                    "status-pending",
+                    "status-paid",
+                    "status-completed",
+                    "status-awaiting_payment"
+                );
+
+                // добавляем новый
+                badge.classList.add(`status-${newStatus}`);
+
+                // обновляем текст
+                badge.textContent = statusTranslations[newStatus] || newStatus;
+            }
         }
-    } catch (err) { console.error(err); }
+
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 function closeModal() {

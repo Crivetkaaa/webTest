@@ -95,7 +95,6 @@ func GetProductAPI(c *gin.Context, db *database_folder.DB) {
 		c.JSON(404, nil)
 		return
 	}
-
 	c.JSON(200, product)
 }
 
