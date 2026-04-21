@@ -282,8 +282,13 @@ async function updateStatus() {
                 // обновляем текст
                 badge.textContent = statusTranslations[newStatus] || newStatus;
             }
-        }
+        } 
 
+        else if (response.status == 401) {
+            window.location.href="/admin"
+        } else {
+            alert("Что-то пошло не так")
+        }
     } catch (err) {
         console.error(err);
     }
