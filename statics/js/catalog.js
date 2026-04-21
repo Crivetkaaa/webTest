@@ -1,35 +1,41 @@
 import { openProductModal } from "./product.js";
 
 let previousPage = "/";
+let currentOffset = 0;
+const limit = 20;
+let isLoading = false;
+let allLoaded = false;
+
+// Определяем текущую основную категорию из URL сразу (например, 'clothes' или 'parfume')
+const currentMainCategory = window.location.pathname.split("/")[1] || 'parfume';
 
 // -------------------------
 // INIT
 // -------------------------
 export async function initCatalog() {
-    const category = window.location.pathname.split("/")[1];
-
     const miniContainer = document.getElementById("mini-navbar");
+    if (!miniContainer) return;
 
-    const resCats = await fetch(`/api/mini_categories?category=${category}`);
+    const resCats = await fetch(`/api/mini_categories?category=${currentMainCategory}`);
     const categories = await resCats.json();
 
     const allButton = `
-        <a href="/${category}" data-slug="">
+        <a href="/${currentMainCategory}" data-slug="">
             Все
         </a>
     `;
 
-    miniContainer.innerHTML =
-        allButton +
-        categories.map(item =>
-            `<a href="/${category}/${item.slug}" data-slug="${item.slug}">
+    miniContainer.innerHTML = `
+    <div class="category">
+        ${allButton}
+        ${categories.map(item => `
+            <a href="/${currentMainCategory}/${item.slug}" data-slug="${item.slug}">
                 ${item.name}
-            </a>`
-        ).join("");
-
-    await loadProducts(category, "");
-
-    // фильтр
+            </a>
+        `).join("")}
+    </div>
+`;
+    // фильтр по мини-категориям
     miniContainer.addEventListener("click", (e) => {
         const link = e.target.closest("a");
         if (!link) return;
@@ -38,17 +44,23 @@ export async function initCatalog() {
 
         const sub = link.dataset.slug;
 
-        if (!sub) {
-            history.pushState({}, "", `/${category}`);
-            loadProducts(category, "");
-            return;
-        }
+        // ВАЖНО: Сбрасываем состояние пагинации перед загрузкой новой категории
+        currentOffset = 0;
+        allLoaded = false;
+        
+        const loadMoreBtn = document.getElementById("load-more");
+        if (loadMoreBtn) loadMoreBtn.style.display = "block";
 
-        history.pushState({}, "", `/${category}/${sub}`);
-        loadProducts(category, sub);
+        if (!sub) {
+            history.pushState({}, "", `/${currentMainCategory}`);
+            loadProducts(currentMainCategory, "");
+        } else {
+            history.pushState({}, "", `/${currentMainCategory}/${sub}`);
+            loadProducts(currentMainCategory, sub);
+        }
     });
 
-    // клик по карточке
+    // клик по карточке (модальное окно)
     document.addEventListener("click", async (e) => {
         const card = e.target.closest(".product_card");
         if (!card) return;
@@ -72,13 +84,8 @@ export async function initCatalog() {
 // -------------------------
 // LOAD PRODUCTS
 // -------------------------
-let currentOffset = 0;
-const limit = 20;
-let isLoading = false;
-let allLoaded = false; // Флаг, чтобы не спамить запросами, если товары кончились
-
 export async function loadProducts(type, subcategory, append = false) {
-    if (isLoading || allLoaded) return;
+    if (isLoading || (allLoaded && append)) return;
     isLoading = true;
 
     try {
@@ -88,12 +95,13 @@ export async function loadProducts(type, subcategory, append = false) {
 
         const data = await res.json();
         const container = document.getElementById("products-container");
-        const buttonWrapper = document.querySelector(".button-container");
+        const loadMoreBtn = document.getElementById("load-more");
 
-        // Если данных нет — скрываем кнопку и выходим
+        // Если данных нет совсем
         if (!data || data.length === 0) {
             allLoaded = true;
-            if (buttonWrapper) buttonWrapper.style.display = "none";
+            if (loadMoreBtn) loadMoreBtn.style.display = "none";
+            if (!append) container.innerHTML = "<p class='text-center w-full py-10'>Товары не найдены</p>";
             return;
         }
 
@@ -115,10 +123,12 @@ export async function loadProducts(type, subcategory, append = false) {
             container.innerHTML = html;
         }
 
-        // Если пришло меньше лимита — товары закончились
+        // Если пришло меньше лимита — товары в этой категории закончились
         if (data.length < limit) {
             allLoaded = true;
-            if (buttonWrapper) buttonWrapper.style.display = "none";
+            if (loadMoreBtn) loadMoreBtn.style.display = "none";
+        } else {
+            if (loadMoreBtn) loadMoreBtn.style.display = "block";
         }
 
     } catch (err) {
@@ -128,22 +138,32 @@ export async function loadProducts(type, subcategory, append = false) {
     }
 }
 
-// Логика инициализации
+// -------------------------
+// DOM CONTENT LOADED
+// -------------------------
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Сразу загружаем первую партию (offset 0)
-    loadProducts('parfume', '', false);
+    // Определяем подкатегорию из URL при загрузке (если есть)
+    const pathParts = window.location.pathname.split("/");
+    const subCatFromUrl = pathParts[2] || "";
+
+    // Инициализируем меню и загружаем первую партию
+    initCatalog();
+    loadProducts(currentMainCategory, subCatFromUrl, false);
 
     const loadMoreBtn = document.getElementById("load-more");
     if (loadMoreBtn) {
         
         const fetchNext = () => {
             if (!isLoading && !allLoaded) {
-                currentOffset += limit; // Прибавляем ТОЛЬКО при загрузке следующей части
-                loadProducts('parfume', '', true);
+                currentOffset += limit;
+                // Всегда берем актуальную подкатегорию из URL
+                const currentPathParts = window.location.pathname.split("/");
+                const currentSubCat = currentPathParts[2] || "";
+                loadProducts(currentMainCategory, currentSubCat, true);
             }
         };
 
-        // Клик
+        // Клик по кнопке
         loadMoreBtn.addEventListener("click", (e) => {
             e.preventDefault();
             fetchNext();
@@ -151,9 +171,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Скролл (Intersection Observer)
         const observer = new IntersectionObserver((entries) => {
-            // Сработает только если кнопка видна И первая партия уже загружена
-            if (entries[0].isIntersecting && currentOffset >= 0 && !isLoading) {
-                // Небольшая задержка, чтобы не было ложных срабатываний при старте
+            if (entries[0].isIntersecting && !isLoading && !allLoaded) {
+                // Загружаем следующую партию только если на странице уже что-то есть
                 if (document.querySelectorAll('.product_card').length > 0) {
                    fetchNext();
                 }

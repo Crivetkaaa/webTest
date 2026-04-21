@@ -3,13 +3,16 @@
 @import "cart.css";
 @import "mini_navbar.css";
 
+/* КЛЮЧ — убирает горизонтальный скролл */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
 
-/* Шапка */
-/* .header .logo {
-    display: flex;
-    justify-content: center;
-    font-size: 1.9rem;
-} */
+/* Чтобы padding не ломал ширину */
+* {
+    box-sizing: border-box;
+}
 
 /* Контейнер логотипа */
 .header .logo {
@@ -19,14 +22,14 @@
     width: 100%;
 }
 
-/* Стили для самого изображения */
+/* Стили для изображения */
 .header .logo img {
     max-width: 100%;
     height: auto;
     width: 450px;
 }
 
-/* Адаптация под маленькие экраны (телефоны) */
+/* Телефоны */
 @media (max-width: 480px) {
     .header .logo img {
         width: 280px;
@@ -43,7 +46,6 @@
     text-decoration: none;
 }
 
-
 /* Продукты */
 .products {
     justify-content: center;
@@ -56,17 +58,21 @@
     flex-wrap: wrap;
     gap: 20px;
     justify-content: center;
-    position: relative;
-    z-index: 10;
-}
-#search-controls {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-decoration: none;
+    margin: 0 auto; /* добавлено */
 }
 
+#search-controls {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    margin: 0 auto !important;   /* убрали кривой margin */
+    padding: 0 10px;
+}
+
+#search-controls * {
+    text-align: center;
+}
 
 .category a {
     display: inline-block;
@@ -80,14 +86,18 @@
     color: #007bff;
 }
 
+/* КАРТОЧКИ */
 .products_card {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 30px;
     padding: 20px;
+
     max-width: 1000px;
     margin: 0 auto;
+
+    box-sizing: border-box;
 }
 
 .product_card a {
@@ -171,51 +181,45 @@
     }
 }
 
-@media (max-width: 908px) {
+@media (max-width: 900px) {
+
+    .category {
+        max-width: 100% !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 10px !important;
+        padding: 0 15px !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+    }
+
+    .category a {
+        font-size: 14px !important;
+        text-align: center;
+        flex-grow: 0;
+        white-space: nowrap;
+    }
+
+    /* фикс переполнения */
     .products_card {
         display: grid !important;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        padding: 10px;
-        width: 100%;
-        box-sizing: border-box;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        width: 100% !important;
+        padding: 10px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
     }
 
     .product_card {
         width: 100% !important;
+        max-width: 100% !important;
         margin: 0 !important;
-        min-width: 0;
-        box-sizing: border-box;
-        font-size: 0.9rem;
-    }
-
-    .product_image {
-        width: 100% !important;
-        height: auto;
-        aspect-ratio: 1 / 1;
-        object-fit: cover;
-        display: block;
-    }
-
-    .category {
-        gap: 20px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .cart-modal-content {
-        width: 95%;
-        margin: 20px auto;
-        padding: 20px;
-    }
-
-    .header .logo {
-        font-size: 1.4rem;
-    }
-
-    .text {
-        font-size: 1rem;
-        margin: 12px;
+        padding: 5px !important;
+        box-sizing: border-box !important;
     }
 }
 

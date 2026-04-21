@@ -203,142 +203,112 @@
 /* =========================
    MOBILE
    ========================= */
+/* =========================
+   MOBILE
+   ========================= */
 @media (max-width: 900px) {
 
-    /* =========================
-       ОБЩИЙ КОНТЕЙНЕР
-       ========================= */
+    .product-modal-content {
+        padding: 60px 15px 20px; /* Уменьшаем отступы сверху */
+    }
+
+    /* РАСПОЛОЖЕНИЕ: Ставим всё в одну колонку на всю ширину */
     .modal-layout {
         flex-direction: column;
-        gap: 16px;
+        gap: 20px; /* Уменьшаем гигантский gap */
         width: 100%;
         max-width: 100%;
+        margin: 0;
+        align-items: stretch; /* Растягиваем контент */
     }
 
-    .modal-right {
-        width: 100%;
-        min-width: 0;
-        max-width: 100%;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        align-items: stretch;   /* ВАЖНО */
-    }
-
-    /* =========================
-       ГАЛЕРЕЯ
-       ========================= */
+    /* ГАЛЕРЕЯ: Главное фото сверху, миниатюры под ним */
     .modal-left {
-        width: fit-content;
-        flex-direction: column;
+        width: 100%;
+        flex-direction: column; /* Миниатюры теперь ПОД фото */
         align-items: center;
+        gap: 15px;
     }
 
-    /* главное фото */
+    /* Главное фото: больше не ограничиваем fit-content */
     .modal-main-container {
-        width: fit-content;
-        display: flex;
+        width: 100%;
+        max-width: 100%;
         justify-content: center;
-        padding: 0;
+        gap: 0; /* Убираем тот безумный gap в 100000px */
     }
 
     .modal-main-image {
         width: 100%;
-        max-height: 65vh;
+        max-height: 50vh; /* Уменьшаем высоту, чтобы инфо влезло на экран */
         object-fit: contain;
     }
 
-    /* миниатюры */
+    /* Миниатюры: Горизонтальный скролл под фото */
     .modal-thumbnails {
-        display: flex;
+        order: 2; /* Ставим после главного фото */
         flex-direction: row;
-        gap: 8px;
+        gap: 10px;
         overflow-x: auto;
         width: 100%;
-        padding: 10px 0;
-        justify-content: center;
+        padding: 5px 0;
+        justify-content: flex-start; /* Скролл удобнее от левого края */
+        -webkit-overflow-scrolling: touch;
     }
 
     .modal-thumbnail {
-        width: 70px;
-        height: 85px;
-        flex: 0 0 auto;
+        width: 60px;
+        height: 75px;
+        flex: 0 0 auto; /* Не даем картинкам сжиматься */
     }
 
-    /* =========================
-       ТЕКСТ
-       ========================= */
+    /* ИНФОРМАЦИЯ: Убираем фиксированную ширину */
+    .modal-right {
+        position: static; /* Убираем sticky на мобилках */
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex: none;
+    }
 
     #modal-title {
-        font-size: 22px;
-        margin-top: 10px;
-        text-align: center;
+        font-size: 24px;
+        margin-top: 5px;
+        text-align: left; /* Текст слева привычнее */
     }
 
+    /* Описание и Таблица */
     .description-text {
         font-size: 14px;
-        line-height: 1.5;
-        margin: 10px 0;
-    }
-
-    /* =========================
-       ТАБЛИЦА (СТАБИЛЬНАЯ ВЕРСИЯ)
-       ========================= */
-
-    .custom-table {
-        width: 100%;
-        margin-top: 10px;
-        border-collapse: collapse;
+        margin: 15px 0;
     }
 
     .custom-table tr {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
+        gap: 10px; /* Уменьшаем зазор в строках таблицы */
     }
 
-    .custom-table td {
-        padding: 0;
-        font-size: 14px;
-    }
-
-    .custom-table td:first-child {
-        text-align: left;
-        color: #888;
-        font-weight: 600;
-    }
-
-    .custom-table td:last-child {
-        text-align: right;
-        color: #222;
-    }
-
-    /* =========================
-       SELECT
-       ========================= */
-
+    /* Кнопки и селекты делаем крупнее (под палец) */
     .volume-select {
-        width: 100%;
-        margin-top: 15px;
+        padding: 12px;
+        font-size: 16px; /* 16px предотвращает авто-зум в iOS */
     }
-
-    /* =========================
-       КНОПКА / ЦЕНА
-       ========================= */
 
     .product_button {
-        width: 100%;
-        margin-top: 10px;
+        padding: 18px;
+        font-size: 16px;
     }
 
-    /* =========================
-       КРЕСТИК
-       ========================= */
-
+    /* КРЕСТИК: Удобнее для нажатия */
     .product-close {
-        top: 15px;
+        top: 10px;
         right: 15px;
-        font-size: 32px;
+        font-size: 38px;
+        background: rgba(255,255,255,0.8);
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

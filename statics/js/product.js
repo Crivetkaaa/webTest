@@ -184,13 +184,13 @@ window.updateCartUI = function() {
                 totalSum += item.price * item.quantity;
                 return `
             <div class="cart-item" style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; padding: 10px 0;">
-                <div style="flex: 1;">
-                    <!-- Ссылка на товар -->
-                    <a href="${item.url}" style="text-decoration: none; color: #333; display: block;">
-                        <div style="font-weight: bold; font-size: 14px; margin-bottom: 2px;">${item.title}</div>
-                    </a>
-                    <div style="font-size: 12px; color: #666;">${item.volume} — ${item.price} ₽</div>
-                </div>
+                <div style="flex: 1; min-width: 0; word-wrap: break-word; overflow: hidden;">
+    <a href="${item.url}" style="text-decoration: none; color: #333; display: block;">
+        <div style="font-weight: bold; font-size: 14px; margin-bottom: 2px; white-space: normal;">${item.title}</div>
+    </a>
+    <div style="font-size: 12px; color: #666;">${item.volume} — ${item.price} ₽</div>
+</div>
+
                 
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button onclick="changeQuantity(${index}, -1)" style="width: 25px; height: 25px; cursor: pointer; border: 1px solid #ddd; background: #f9f9f9; border-radius: 4px;">-</button>

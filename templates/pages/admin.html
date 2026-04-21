@@ -3,176 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель заказов</title>
-
+    <title>Панель управления заказами</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-        }
-        .status-completed { background: #dcfce7; color: #166534; }
+        .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
         .status-pending { background: #fef3c7; color: #92400e; }
+        .status-awaiting_payment { background: #ffedd5; color: #9a3412; }
+        .status-paid { background: #dbeafe; color: #1e40af; }
+        .status-completed { background: #dcfce7; color: #166534; }
 
         .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            justify-content: center;
-            align-items: center;
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
+            z-index: 50;
         }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 400px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-        }
-
-        tr:hover {
-            background: #f8fafc;
-        }
-
+        .modal-content { background: white; padding: 24px; border-radius: 12px; width: 450px; max-height: 90vh; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; }
+        tr:hover { background: #f8fafc; }
         .cursor-pointer { cursor: pointer; }
     </style>
 </head>
-
 <body class="bg-gray-50 p-6">
+    <!-- NAV BAR -->
+<nav class="bg-gray-800 text-white shadow-md mb-6">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-8">
+                <span class="text-xl font-bold tracking-wider text-indigo-400">ADMIN PANEL</span>
+                
+                <div class="flex space-x-4">
+                    <a href="/admin/dashboard" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-900 text-white border-b-2 border-indigo-500">
+                        Заказы
+                    </a>
+                    <a href="/admin/products" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">
+                        Товары
+                    </a>
+                    <a href="/admin/categories" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">
+                        Категории
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
 
-<h1 class="text-2xl font-bold mb-4">Заказы</h1>
 
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Имя</th>
-            <th>Телефон</th>
-            <th>Статус</th>
-            <th>Сумма</th>
-        </tr>
-    </thead>
-    <tbody id="orders-list"></tbody>
-</table>
-
-<!-- MODAL -->
-<div id="order-modal" class="modal-overlay">
-    <div class="modal-content">
-        <h2 id="m-order-id" class="text-xl font-bold mb-3"></h2>
-
-        <p><b>Имя:</b> <span id="m-name"></span></p>
-        <p><b>Телефон:</b> <span id="m-phone"></span></p>
-        <p><b>Статус:</b> <span id="m-status"></span></p>
-        <p><b>Сумма:</b> <span id="m-total"></span></p>
-<div class="mt-4">
-    <h3 class="font-bold mb-2">Товары</h3>
-    <ul id="m-items" class="space-y-1 text-sm text-gray-700"></ul>
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Управление заказами</h1>
+    
+    <!-- ФИЛЬТР -->
+    <div class="flex items-center gap-3 bg-white p-2 rounded-lg shadow-sm border">
+        <span class="text-sm font-medium text-gray-500 italic">Фильтр:</span>
+        <select id="filter-status" onchange="applyFilter()" class="text-sm border-none focus:ring-0 cursor-pointer bg-transparent font-semibold">
+            <option value="all">Все заказы</option>
+            <option value="pending">Ожидает оплаты</option>
+            <option value="paid">Оплачено</option>
+            <option value="completed">Выполнено</option>
+        </select>
+    </div>
 </div>
-        <button onclick="closeModal()" class="mt-4 bg-black text-white px-4 py-2 rounded">
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table>
+        <thead class="bg-gray-100">
+            <tr>
+                <th>ID</th>
+                <th>Дата заказа</th>
+                <th>Клиент</th>
+                <th>Телефон</th>
+                <th>Статус</th>
+                <th>Сумма</th>
+            </tr>
+        </thead>
+        <tbody id="orders-list"></tbody>
+    </table>
+    
+    <!-- Кнопку нужно вынести за пределы таблицы, но оставить внутри белого блока или под ним -->
+    <div class="p-4 border-t flex justify-center bg-gray-50">
+        <button id="load-more-btn" onclick="loadMore()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg shadow-sm hover:bg-gray-50 font-medium text-gray-700 transition">
+            Загрузить ещё
+        </button>
+    </div>
+</div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО -->
+<div id="order-modal" class="modal-overlay">
+    <div class="modal-content shadow-2xl">
+        <h2 id="m-order-id" class="text-2xl font-bold mb-4 text-gray-800"></h2>
+        
+        <div class="space-y-2 mb-6 pb-4 border-b">
+            <p><b>Клиент:</b> <span id="m-name"></span></p>
+            <p><b>Телефон:</b> <span id="m-phone"></span></p>
+            
+            <div class="flex items-center gap-2 py-2">
+                <b>Статус:</b>
+                <select id="m-status-select" class="border rounded px-2 py-1 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500">
+                    <option value="pending">Ожидает оплаты</option>
+                    <option value="paid">Оплачено</option>
+                    <option value="completed">Выполнено</option>
+                </select>
+                <button onclick="updateStatus()" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded hover:bg-indigo-700 transition">
+                    Обновить
+                </button>
+            </div>
+
+            <p><b>Итого к оплате:</b> <span id="m-total" class="font-bold text-lg text-indigo-600"></span></p>
+        </div>
+
+        <div>
+            <h3 class="font-bold mb-3 uppercase text-xs text-gray-500 tracking-wider">Состав заказа</h3>
+            <ul id="m-items" class="space-y-3"></ul>
+        </div>
+
+        <button onclick="closeModal()" class="w-full mt-8 bg-gray-800 hover:bg-black text-white font-medium py-2 rounded-lg transition">
             Закрыть
         </button>
     </div>
 </div>
 
 <script>
-const orders = [
-    {
-        id: 1,
-        name: "Александр Иванов",
-        phone: "+7 912 345 67 89",
-        status: "pending",
-        total: "12 500 ₽",
-        items: [
-            { title: "Chanel No.5", volume: "50 ml", qty: 1, price: 8000 },
-            { title: "Dior Sauvage", volume: "100 ml", qty: 1, price: 4500 }
-        ]
-    },
-    {
-        id: 2,
-        name: "Мария Смирнова",
-        phone: "+7 900 111 22 33",
-        status: "completed",
-        total: "8 200 ₽",
-        items: [
-            { title: "YSL Libre", volume: "50 ml", qty: 1, price: 8200 }
-        ]
+let allOrders = []; 
+window.currentOrderId = null;
+let offset = 0;
+const limit = 10;
+let currentStatus = "all";
+
+const statusTranslations = {
+    'pending': 'Ожидает оплаты',
+    'paid': 'Оплачено',
+    'completed': 'Выполнено'
+};
+
+// 1. ЗАГРУЗКА ДАННЫХ
+async function fetchOrders(reset = false) {
+    if (reset) {
+        offset = 0;
+        allOrders = [];
+        document.getElementById("orders-list").innerHTML = ""; 
     }
-];
 
-function renderOrders() {
-    const tbody = document.getElementById("orders-list");
+    const url = `/admin/dashboard/info?limit=${limit}&offset=${offset}&status=${currentStatus}`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Ошибка сервера");
+        const newOrders = await response.json();
 
-    tbody.innerHTML = orders.map(o => `
-        <tr onclick="openOrder(${o.id})" class="cursor-pointer">
-            <td>#${o.id}</td>
-            <td>${o.name}</td>
-            <td>${o.phone}</td>
-            <td>
-                <span class="status-badge ${o.status}">
-                    ${o.status === "completed" ? "Выполнен" : "В обработке"}
-                </span>
-            </td>
-            <td>${o.total}</td>
-        </tr>
-    `).join("");
+        const btn = document.getElementById("load-more-btn");
+        if (!newOrders || newOrders.length < limit) {
+            btn.style.display = "none"; 
+        } else {
+            btn.style.display = "block";
+        }
+
+        if (newOrders && newOrders.length > 0) {
+            allOrders = [...allOrders, ...newOrders];
+            renderOrders(newOrders, !reset); // Дописываем, если не reset
+            offset += limit;
+        } else if (reset) {
+            document.getElementById("orders-list").innerHTML = "<tr><td colspan='6' class='text-center py-4'>Заказов не найдено</td></tr>";
+        }
+    } catch (err) {
+        console.error("Ошибка загрузки:", err);
+    }
 }
 
-function openOrder(id) {
-    const o = orders.find(x => x.id === id);
-    if (!o) return;
+// 2. ФИЛЬТРАЦИЯ (теперь она просто вызывает fetchOrders с параметрами)
+function applyFilter() {
+    currentStatus = document.getElementById("filter-status").value;
+    fetchOrders(true); // Сбрасываем список и грузим с сервера только нужный статус
+}
 
-    document.getElementById("m-order-id").innerText = "Заказ #" + o.id;
-    document.getElementById("m-name").innerText = o.name;
-    document.getElementById("m-phone").innerText = o.phone;
-    document.getElementById("m-status").innerText = o.status;
-    document.getElementById("m-total").innerText = o.total;
+function loadMore() {
+    fetchOrders(false); 
+}
 
-    const statusEl = document.getElementById("m-status");
-    statusEl.className = "status-badge " + o.status;
-    statusEl.innerText = o.status === "completed" ? "Выполнен" : "В обработке";
+// 3. ОТОБРАЖЕНИЕ
+function renderOrders(orders, append = false) {
+    const tbody = document.getElementById("orders-list");
+    
+    const html = orders.map(o => {
+        const dateObj = new Date(o.OrdersInfo.Created_at);
+        const formattedDate = dateObj.toLocaleString('ru-RU', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
 
-    // 🔥 ТОВАРЫ
-    const itemsEl = document.getElementById("m-items");
-
-    if (!o.items || o.items.length === 0) {
-        itemsEl.innerHTML = "<li>Нет данных</li>";
-    } else {
-        itemsEl.innerHTML = o.items.map(item => `
-            <li class="flex justify-between border-b py-1">
-                <span>
-                    ${item.title} (${item.volume}) × ${item.qty}
+        return `
+        <tr onclick="openOrder(${o.OrdersInfo.Id})" class="cursor-pointer transition">
+            <td class="font-medium">#${o.OrdersInfo.Id}</td>
+            <td class="text-gray-500 text-sm">${formattedDate}</td>
+            <td>${o.OrdersInfo.CustomerName}</td>
+            <td>${o.OrdersInfo.Phone}</td>
+            <td>
+                <span class="status-badge status-${o.OrdersInfo.Status}">
+                    ${statusTranslations[o.OrdersInfo.Status] || o.OrdersInfo.Status}
                 </span>
-                <span>${item.price * item.qty} ₽</span>
-            </li>
-        `).join("");
+            </td>
+            <td class="font-bold">${o.OrdersInfo.TotalPrice} ₽</td>
+        </tr>`;
+    }).join("");
+
+    if (append) {
+        tbody.insertAdjacentHTML('beforeend', html);
+    } else {
+        tbody.innerHTML = html;
     }
+}
+
+// 4. МОДАЛЬНОЕ ОКНО И ОБНОВЛЕНИЕ
+function openOrder(id) {
+    const orderData = allOrders.find(x => x.OrdersInfo.Id === id);
+    if (!orderData) return;
+
+    window.currentOrderId = id;
+    const info = orderData.OrdersInfo;
+    const products = orderData.ProductInfo;
+
+    document.getElementById("m-order-id").innerText = "Заказ #" + info.Id;
+    document.getElementById("m-name").innerText = info.CustomerName;
+    document.getElementById("m-phone").innerText = info.Phone;
+    document.getElementById("m-total").innerText = info.TotalPrice + " ₽";
+    document.getElementById("m-status-select").value = info.Status;
+
+    const itemsEl = document.getElementById("m-items");
+    itemsEl.innerHTML = products.map(p => `
+        <li class="flex justify-between items-start border-b border-gray-50 pb-2">
+            <div>
+                <div class="font-medium text-gray-900">${p.Name}</div>
+                <div class="text-xs text-gray-500">${p.Value} ${p.Unit}</div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm font-semibold">${p.Price} ₽ x ${p.Count}</div>
+                <div class="text-xs text-indigo-500">${p.Price * p.Count} ₽</div>
+            </div>
+        </li>
+    `).join("");
 
     document.getElementById("order-modal").style.display = "flex";
 }
+
+async function updateStatus() {
+    const newStatus = document.getElementById("m-status-select").value;
+    const orderId = window.currentOrderId;
+    if (!orderId) return;
+
+    try {
+        const response = await fetch(`/admin/orders/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: orderId, status: newStatus })
+        });
+
+        if (response.ok) {
+            closeModal();
+            fetchOrders(true); // Перезагружаем список, чтобы статус обновился и сработал текущий фильтр
+        }
+    } catch (err) { console.error(err); }
+}
+
 function closeModal() {
     document.getElementById("order-modal").style.display = "none";
 }
 
-window.onclick = (e) => {
-    const modal = document.getElementById("order-modal");
-    if (e.target === modal) closeModal();
-};
+window.onclick = (e) => { if (e.target === document.getElementById("order-modal")) closeModal(); };
 
-renderOrders();
+// Стартовый запуск
+fetchOrders(true);
+
 </script>
-
 </body>
 </html>

@@ -57,3 +57,25 @@ type CustomerInfo struct {
 	Phone   string `json:"phone"`   // соответствует name="phone"
 	Comment string `json:"comment"` // соответствует name="comment"
 }
+
+type OrdersInfo struct {
+	Id           int
+	Created_at   string
+	CustomerName string
+	Phone        string
+	TotalPrice   int
+	Status       string
+}
+
+type ProductInfo struct {
+	Name  string
+	Value string
+	Unit  string
+	Count int
+	Price int
+}
+
+type AdminInfo struct {
+	OrdersInfo  OrdersInfo
+	ProductInfo []ProductInfo
+}

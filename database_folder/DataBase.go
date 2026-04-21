@@ -448,3 +448,124 @@ func (db *DB) InsertOrder(info struct_folder.OrderData) error {
 	err = tx.Commit()
 	return err
 }
+
+func (db *DB) Login(userName string, userPassword string) bool {
+	query := `SELECT password FROM administrator WHERE login = ?`
+	var password string
+	err := db.Db.QueryRow(query, userName).Scan(&password)
+	if err != nil {
+		return false
+	}
+	// TODO hash
+	fmt.Println(password)
+	if password != userPassword {
+		return false
+	}
+	return true
+}
+
+// Обновляем сигнатуру функции: добавляем limit, offset и status
+func (db *DB) getOrders(info *[]struct_folder.AdminInfo, limit, offset int, status string) error {
+	// Базовый запрос
+	query := `
+    SELECT o.id, o.created_at, u.name, u.phone, o.total_price, o.status
+    FROM orders o
+    JOIN users u ON o.user_id = u.id `
+
+	var args []interface{}
+
+	// Если статус не "all", добавляем фильтрацию в SQL
+	if status != "all" && status != "" {
+		query += " WHERE o.status = ? "
+		args = append(args, status)
+	}
+
+	// Добавляем сортировку и пагинацию
+	query += " ORDER BY o.created_at DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := db.Db.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item struct_folder.AdminInfo
+		err := rows.Scan(
+			&item.OrdersInfo.Id, &item.OrdersInfo.Created_at,
+			&item.OrdersInfo.CustomerName, &item.OrdersInfo.Phone,
+			&item.OrdersInfo.TotalPrice, &item.OrdersInfo.Status,
+		)
+		if err != nil {
+			return err
+		}
+		*info = append(*info, item)
+	}
+	return nil
+}
+
+// Обновляем главную функцию
+func (db *DB) GetOrdersAdmin(limit, offset int, status string) ([]struct_folder.AdminInfo, error) {
+	var adminInfo []struct_folder.AdminInfo
+
+	err := db.getOrders(&adminInfo, limit, offset, status)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.getOrdersInfo(&adminInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return adminInfo, nil
+}
+
+func (db *DB) getOrdersInfo(info *[]struct_folder.AdminInfo) error {
+	query :=
+		`
+	SELECT 
+    p.name, 
+    pv.value, 
+    pv.unit, 
+    oi.quantity, 
+    oi.price_at_purchase
+FROM order_items oi
+JOIN product_variants pv ON oi.variant_id = pv.id
+JOIN products p ON pv.product_id = p.id
+WHERE oi.order_id = ?
+	`
+	for i := range *info {
+		rows, err := db.Db.Query(query, (*info)[i].OrdersInfo.Id)
+		if err != nil {
+			return err
+		}
+
+		var items []struct_folder.ProductInfo
+		for rows.Next() {
+			var item struct_folder.ProductInfo
+
+			err := rows.Scan(&item.Name, &item.Value, &item.Unit, &item.Count, &item.Price)
+			if err != nil {
+				return err
+			}
+			items = append(items, item)
+		}
+		rows.Close()
+		(*info)[i].ProductInfo = items
+	}
+	return nil
+}
+
+func (db *DB) UpdateStatus(orderID int, orderStatus string) error {
+	fmt.Println(orderStatus)
+	query := `UPDATE orders 
+set status = ?
+WHERE id = ?`
+	_, err := db.Db.Exec(query, orderStatus, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
