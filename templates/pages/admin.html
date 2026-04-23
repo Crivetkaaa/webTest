@@ -26,27 +26,7 @@
 </head>
 <body class="bg-gray-50 p-6">
     <!-- NAV BAR -->
-<nav class="bg-gray-800 text-white shadow-md mb-6">
-    <div class="max-w-7xl mx-auto px-6">
-        <div class="flex items-center justify-between h-16">
-            <div class="flex items-center gap-8">
-                <span class="text-xl font-bold tracking-wider text-indigo-400">ADMIN PANEL</span>
-                
-                <div class="flex space-x-4">
-                    <a href="/admin/dashboard" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-900 text-white border-b-2 border-indigo-500">
-                        Заказы
-                    </a>
-                    <a href="/admin/products" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">
-                        Товары
-                    </a>
-                    <a href="/admin/categories" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition">
-                        Категории
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</nav>
+    {{ template "admin_navbar"}}
 
 
 <div class="flex justify-between items-center mb-6">
