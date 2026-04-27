@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"fmt"
 	"webTest/database_folder"
 	"webTest/handlers"
 
@@ -13,6 +14,7 @@ func APIRouters(api *gin.RouterGroup, db *database_folder.DB) {
 	})
 
 	api.GET("/get_products", func(ctx *gin.Context) {
+		fmt.Println("sfsdf")
 		handlers.GetProducrs(ctx, db)
 	})
 
@@ -27,4 +29,7 @@ func APIRouters(api *gin.RouterGroup, db *database_folder.DB) {
 		handlers.PostOrders(ctx, db)
 	})
 
+	api.GET("/categories", func(ctx *gin.Context) {
+		handlers.GetCategories(ctx, db)
+	})
 }

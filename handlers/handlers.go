@@ -120,3 +120,13 @@ func PostOrders(c *gin.Context, db *database_folder.DB) {
 		"status": "success",
 	})
 }
+
+func GetCategories(c *gin.Context, db *database_folder.DB) {
+	nav, err := db.GetAllCategories()
+	if err != nil {
+		c.JSON(http.StatusNotFound, nil)
+		return
+	}
+	c.JSON(http.StatusOK, nav)
+
+}

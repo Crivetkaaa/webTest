@@ -108,6 +108,10 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 		ctx.HTML(200, "admin.html", nil)
 	})
 
+	adminPanel.GET("/products", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "adminProduct.html", nil)
+	})
+
 	adminPanel.GET("/dashboard/info", func(ctx *gin.Context) {
 		dashboardInfo(ctx, db)
 	})

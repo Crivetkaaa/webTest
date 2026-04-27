@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Товоры</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #productCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+/* карточка товара */
+.product {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: 0.2s;
+}
+
+.product:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+/* картинка маленькая */
+.product img {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #f3f4f6;
+}
+
+/* название */
+.product div:nth-child(2) {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.2;
+}
+
+/* цена */
+.product div:nth-child(3) {
+    font-size: 13px;
+    color: #2563eb;
+    font-weight: 600;
+}
+.filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+/* select общий стиль */
+.filters-bar select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    min-width: 180px;
+    outline: none;
+    transition: 0.2s;
+}
+
+.filters-bar select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+/* кнопки */
+.btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+/* refresh */
+.refresh-btn {
+    background: #10b981;
+    color: white;
+}
+
+.refresh-btn:hover {
+    background: #059669;
+}
+
+/* add */
+.add-btn {
+    background: #3b82f6;
+    color: white;
+}
+
+.add-btn:hover {
+    background: #2563eb;
+}
+/* затемнённый фон */
+.modal {
+    position: fixed;
+    inset: 0; /* top:0 left:0 right:0 bottom:0 */
+    background: rgba(0, 0, 0, 0.5);
+
+    display: none; /* скрыта по умолчанию */
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 9999; /* поверх ВСЕГО */
+}
+
+/* активное состояние */
+.modal.active {
+    display: flex;
+}
+
+/* само окно */
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+
+    width: 500px;
+    max-width: 90%;
+
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+
+    animation: modalFade 0.2s ease;
+}
+
+.modal-photos {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.modal-photos img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.block {
+    margin-bottom: 20px;
+}
+
+.photos {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.photos img {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.variant-row,
+.attr-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.variant-row input,
+.attr-row input {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.save-btn {
+    width: 100%;
+    padding: 12px;
+    background: #22c55e;
+    color: white;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+
+    width: 600px;
+    max-width: 90%;
+
+    /* ограничение по высоте */
+    max-height: 90vh;
+
+    /* включаем скролл */
+    overflow-y: auto;
+
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+/* анимация появления */
+@keyframes modalFade {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+    </style>
+</head>
+<body>
+    {{template "admin_navbar"}}
+    <div class="filters-bar">
+
+    <select id="category">
+        <option value="">Все категории</option>
+    </select>
+
+    <select id="subcategory">
+        <option value="">Все подкатегории</option>
+    </select>
+
+    <button onclick="refreshProducts()" class="btn refresh-btn">
+        🔄 Обновить
+    </button>
+
+    <button class="btn add-btn">
+        + Добавить
+    </button>
+
+</div>
+    <div id="productCards"></div>
+    <button onclick="addProduct()" id="getProduct">Загрузить ещё</button>
+</div>
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        "sfdsf"
+    </div>
+</div>
+</body>
+
+<script src="/statics/js/adminProduct.js"></script>
+</html>

@@ -95,6 +95,40 @@ type MiniNav struct {
 	Name string `json:"name"`
 }
 
+type Nav struct {
+	Slug    string    `json:"slug"`
+	Name    string    `json:"name"`
+	MiniNav []MiniNav `json:"mininav"`
+}
+
+func (db *DB) GetAllCategories() ([]Nav, error) {
+	query := `SELECT slug, name FROM categories`
+
+	rows, err := db.Db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nav []Nav
+
+	for rows.Next() {
+		var n Nav
+		if err := rows.Scan(&n.Slug, &n.Name); err != nil {
+			return nil, err
+		}
+
+		miniN, err := db.GetMiniNavbar(n.Slug)
+		if err != nil {
+			return nil, err
+		}
+
+		n.MiniNav = miniN
+		nav = append(nav, n)
+	}
+	return nav, nil
+}
+
 func (db *DB) GetMiniNavbar(slug string) ([]MiniNav, error) {
 	query := `select slug, name from subcategories where parent_slug=?`
 	rows, err := db.Db.Query(query, slug)
