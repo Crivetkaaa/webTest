@@ -35,6 +35,7 @@ type BonusInfoProduct struct {
 	Characteristic []map[string]string
 	Photo          []string
 	Variants       Variant
+	Categories     []string
 }
 
 type OrderItem struct {
@@ -78,4 +79,26 @@ type ProductInfo struct {
 type AdminInfo struct {
 	OrdersInfo  OrdersInfo
 	ProductInfo []ProductInfo
+}
+
+type VariantDTO struct {
+	Unit  string   `json:"Unit"`
+	Value []string `json:"Value"`
+	Price []string `json:"Price"`
+}
+
+type CharacteristicDTO struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type UpdateProductData struct {
+	ID              int
+	Name            string
+	Description     string
+	Variants        VariantDTO          // Из прошлого ответа
+	Characteristics []CharacteristicDTO // Из прошлого ответа
+	ExistingPhotos  []string            // Список путей
+	NewPhotoPaths   []string            // Сюда запишете пути после c.SaveUploadedFile
+	Subcategories   []string
 }

@@ -3,6 +3,7 @@ package database_folder
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"webTest/struct_folder"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -349,13 +350,42 @@ func (db *DB) getBaseProductInfo(productSlug string, pr *struct_folder.Product) 
 	return nil
 }
 
+func (db *DB) getProductCategories(productSlug string, product *struct_folder.BonusInfoProduct) error {
+	query := `SELECT product_subcategories.subcategory_slug 
+FROM products 
+JOIN product_subcategories ON products.id = product_subcategories.product_id
+where products.slug = ?
+`
+	rows, err := db.Db.Query(query, productSlug)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cat string
+		err := rows.Scan(&cat)
+		if err != nil {
+			return err
+		}
+		product.Categories = append(product.Categories, cat)
+	}
+	return nil
+}
+
 func (db *DB) GetBonusInfo(productSlug string) (struct_folder.BonusInfoProduct, error) {
 	pi := struct_folder.BonusInfoProduct{
 		Characteristic: []map[string]string{},
 		Photo:          []string{},
 		Variants:       struct_folder.Variant{},
+		Categories:     []string{},
 	}
 	err := db.getPhoto(productSlug, &pi)
+	if err != nil {
+		return pi, err
+	}
+
+	err = db.getProductCategories(productSlug, &pi)
 	if err != nil {
 		return pi, err
 	}
@@ -602,4 +632,91 @@ WHERE id = ?`
 		return err
 	}
 	return nil
+}
+
+func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
+	// Защита: если ID 0, обновление не пойдет, чтобы не затереть данные
+	if data.ID <= 0 {
+		return fmt.Errorf("invalid product ID: %d", data.ID)
+	}
+
+	tx, err := db.Db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// 1. Основные данные
+	_, err = tx.Exec(`UPDATE products SET name = ?, description = ? WHERE id = ?`,
+		data.Name, data.Description, data.ID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 2. ВАРИАНТЫ (Удаляем старые связи товара, записываем новые)
+	tx.Exec(`DELETE FROM product_variants WHERE product_id = ?`, data.ID)
+	for i := range data.Variants.Value {
+		tx.Exec(`INSERT INTO product_variants (product_id, value, unit, price) VALUES (?, ?, ?, ?)`,
+			data.ID, data.Variants.Value[i], data.Variants.Unit, data.Variants.Price[i])
+	}
+
+	// 3. ХАРАКТЕРИСТИКИ (Только обновление связей)
+	tx.Exec(`DELETE FROM product_attributes WHERE product_id = ?`, data.ID)
+	for _, char := range data.Characteristics {
+		var charID int64
+		// Ищем существующую пару ключ-значение
+		err := tx.QueryRow(`SELECT id FROM characteristics WHERE key = ? AND value = ?`, char.Key, char.Value).Scan(&charID)
+		if err != nil {
+			// Если такой нет — создаем новую
+			res, _ := tx.Exec(`INSERT INTO characteristics (key, value) VALUES (?, ?)`, char.Key, char.Value)
+			charID, _ = res.LastInsertId()
+		}
+		// Привязываем к товару
+		tx.Exec(`INSERT INTO product_attributes (product_id, characteristic_id) VALUES (?, ?)`, data.ID, charID)
+	}
+
+	// 4. ПОДКАТЕГОРИИ
+	tx.Exec(`DELETE FROM product_subcategories WHERE product_id = ?`, data.ID)
+	for _, subSlug := range data.Subcategories {
+		if subSlug == "" {
+			continue
+		}
+		_, err = tx.Exec(`INSERT INTO product_subcategories (product_id, subcategory_slug) VALUES (?, ?)`,
+			data.ID, subSlug)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 5. ФОТО (УДАЛЕНИЕ ТОЛЬКО С ДИСКА)
+	rows, err := tx.Query(`SELECT url FROM product_photos WHERE product_id = ?`, data.ID)
+	if err == nil {
+		for rows.Next() {
+			var dbUrl string
+			rows.Scan(&dbUrl)
+			stillExists := false
+			for _, current := range data.ExistingPhotos {
+				if dbUrl == current {
+					stillExists = true
+					break
+				}
+			}
+			if !stillExists {
+				os.Remove(dbUrl)
+			}
+		}
+		rows.Close()
+	}
+
+	// 6. СИНХРОНИЗАЦИЯ ФОТО В ТАБЛИЦЕ
+	tx.Exec(`DELETE FROM product_photos WHERE product_id = ?`, data.ID)
+	for _, url := range data.ExistingPhotos {
+		tx.Exec(`INSERT INTO product_photos (product_id, url) VALUES (?, ?)`, data.ID, url)
+	}
+	for _, newUrl := range data.NewPhotoPaths {
+		tx.Exec(`INSERT INTO product_photos (product_id, url) VALUES (?, ?)`, data.ID, newUrl)
+	}
+
+	return tx.Commit()
 }

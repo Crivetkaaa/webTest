@@ -234,6 +234,41 @@
         transform: translateY(0);
     }
 }
+.photo-wrapper {
+    margin: 5px;
+    position: relative;
+}
+.remove-photo-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    text-align: center;
+}
+.photos img {
+    border-radius: 4px;
+    object-fit: cover;
+}
+.categories-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* В две колонки */
+    gap: 8px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+.cat-label {
+    cursor: pointer;
+    font-size: 14px;
+}
+
     </style>
 </head>
 <body>
