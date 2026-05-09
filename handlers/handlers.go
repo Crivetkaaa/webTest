@@ -41,6 +41,7 @@ func GetMiniNavbar(c *gin.Context, db *database_folder.DB) {
 func GetProducrs(c *gin.Context, db *database_folder.DB) {
 	productType := c.Query("type")
 	productCategory := c.Query("category")
+	search := c.Query("search")
 
 	limitStr := c.DefaultQuery("limit", "20")  // Если пусто, будет 20
 	offsetStr := c.DefaultQuery("offset", "0") // Если пусто, будет 0
@@ -55,7 +56,7 @@ func GetProducrs(c *gin.Context, db *database_folder.DB) {
 		offset = 0
 	}
 
-	products, err := db.GetProducts(productType, productCategory, offset, limit)
+	products, err := db.GetProducts(productType, productCategory, search, offset, limit)
 	if err != nil {
 		c.JSON(http.StatusNotFound, nil)
 		return
@@ -129,6 +130,7 @@ func PostOrders(c *gin.Context, db *database_folder.DB) {
 
 	err := db.InsertOrder(order)
 	if err != nil {
+		fmt.Println("Err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Ошибка при сохранении заказа: " + err.Error(),
 		})

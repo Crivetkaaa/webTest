@@ -202,7 +202,13 @@ func (db *DB) getSubcat(products *[]struct_folder.MiniProducts) error {
 	return nil
 }
 
-func (db *DB) GetProducts(productType string, productCategory string, offset int, limit int) ([]struct_folder.MiniProducts, error) {
+func (db *DB) GetProducts(
+	productType string,
+	productCategory string,
+	search string,
+	offset int,
+	limit int,
+) ([]struct_folder.MiniProducts, error) {
 	query := `
     SELECT 
 		p.id,
@@ -222,8 +228,9 @@ func (db *DB) GetProducts(productType string, productCategory string, offset int
     JOIN product_photos pp ON pp.product_id = p.id
 
     WHERE 
-        (c.slug = ? OR ? = "")          -- фильтр по категории
-        AND (s.slug = ? OR ? = "")      -- фильтр по подкатегории
+    (c.slug = ? OR ? = "")
+    AND (s.slug = ? OR ? = "")
+    AND (? = "" OR p.name LIKE CONCAT('%', ?, '%'))
 
     GROUP BY p.id
     ORDER BY p.id
@@ -232,8 +239,9 @@ func (db *DB) GetProducts(productType string, productCategory string, offset int
 
 	rows, err := db.Db.Query(
 		query,
-		productType, productType, // category
-		productCategory, productCategory, // subcategory
+		productType, productType,
+		productCategory, productCategory,
+		search, search,
 		limit,
 		offset,
 	)
