@@ -9,15 +9,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!input || !btn) return;
 
-    let debounce;
+let debounce;
 
-    const runSearch = () => {
-        clearTimeout(debounce);
+const runSearch = () => {
 
-        debounce = setTimeout(() => {
-            setSearch(input.value);
-        }, 300);
-    };
+    clearTimeout(debounce);
+
+    const value = input.value.trim();
+
+    // если пусто — возвращаем каталог
+    if (value.length === 0) {
+        setSearch("");
+        return;
+    }
+
+    // меньше 3 букв — ничего не делаем
+    if (value.length < 3) {
+        return;
+    }
+
+    // debounce 1 секунда
+    debounce = setTimeout(() => {
+        setSearch(value);
+    }, 1000);
+};
 
     input.addEventListener("input", runSearch);
 
