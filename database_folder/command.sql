@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS product_subcategories (
 CREATE TABLE IF NOT EXISTS product_variants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
-    value INTEGER NOT NULL,
+    value TEXT NOT NULL,
     unit TEXT DEFAULT 'ml',
     price INTEGER NOT NULL,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE

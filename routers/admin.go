@@ -3,14 +3,12 @@ package routers
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 	"webTest/database_folder"
+	"webTest/handlers"
 	"webTest/middleware"
-	"webTest/struct_folder"
 
 	"github.com/gin-gonic/gin"
 )
@@ -124,43 +122,28 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 
 	})
 
-	adminPanel.POST("/update_product", func(c *gin.Context) {
-		idInt, _ := strconv.Atoi(c.PostForm("id"))
-
-		var data struct_folder.UpdateProductData
-		data.ID = idInt
-		data.Name = c.PostForm("name")
-		data.Description = c.PostForm("description")
-
-		// Распаковываем JSON (добавлена десериализация Subcategories)
-		json.Unmarshal([]byte(c.PostForm("existingPhotos")), &data.ExistingPhotos)
-		json.Unmarshal([]byte(c.PostForm("variants")), &data.Variants)
-		json.Unmarshal([]byte(c.PostForm("characteristics")), &data.Characteristics)
-		json.Unmarshal([]byte(c.PostForm("subcategories")), &data.Subcategories) // 👈 НОВОЕ
-
-		form, err := c.MultipartForm()
-		if err == nil {
-			files := form.File["newPhotos"]
-			for _, file := range files {
-				// Генерируем уникальное имя, чтобы не перезаписать старое
-				fileName := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
-				// Путь для сохранения файла
-				dst := "statics/img/product_img/" + fileName
-				// Путь для записи в БД (чтобы потом отдавать клиенту)
-				dbPath := "statics/img/product_img/" + fileName
-
-				if err := c.SaveUploadedFile(file, dst); err == nil {
-					data.NewPhotoPaths = append(data.NewPhotoPaths, dbPath)
-				}
-			}
-		}
-
-		err = db.UpdateProduct(data)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(200, gin.H{"status": "success"})
+	adminPanel.POST("/update_product", func(ctx *gin.Context) {
+		handlers.UpdateProduct(ctx, db)
 	})
 
+	adminPanel.POST("/create_product", func(ctx *gin.Context) {
+		handlers.AddProduct(ctx, db)
+	})
+
+	adminPanel.DELETE("/delete_product/:id", func(ctx *gin.Context) {
+		fmt.Println("del 1")
+		handlers.DeleteProduct(ctx, db)
+	})
+
+	adminPanel.POST("/create_category", func(ctx *gin.Context) {
+		handlers.CreateCategory(ctx, db)
+	})
+
+	adminPanel.DELETE("/delete_category", func(ctx *gin.Context) {
+		handlers.DeleteCategory(ctx, db)
+	})
+
+	adminPanel.POST("/update_category", func(ctx *gin.Context) {
+		handlers.UpdateCategory(ctx, db)
+	})
 }

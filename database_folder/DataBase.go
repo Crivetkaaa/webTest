@@ -3,7 +3,10 @@ package database_folder
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+	"regexp"
+	"strings"
 	"webTest/struct_folder"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -33,6 +36,29 @@ func (db *DB) GetType() (string, error) {
 func (db *DB) GetTypes() ([]string, error) {
 	query := `
 	SELECT slug FROM categories`
+	rows, err := db.Db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cats []string
+
+	for rows.Next() {
+		var cat string
+		err := rows.Scan(&cat)
+		if err != nil {
+			return nil, err
+		}
+		cats = append(cats, cat)
+	}
+
+	return cats, nil
+}
+
+func (db *DB) GetMiniTypes() ([]string, error) {
+	query := `
+	SELECT slug FROM subcategories`
 	rows, err := db.Db.Query(query)
 	if err != nil {
 		return nil, err
@@ -272,13 +298,13 @@ func (db *DB) getVariants(productSlug string, pi *struct_folder.BonusInfoProduct
 
 	pi.Variants = struct_folder.Variant{
 		Id:    []int{},
-		Value: []int{},
+		Value: []string{},
 		Price: []int{},
 	}
 
 	for rows.Next() {
 		var id int
-		var val int
+		var val string
 		var pr int
 		var unit string
 
@@ -374,31 +400,50 @@ where products.slug = ?
 }
 
 func (db *DB) GetBonusInfo(productSlug string) (struct_folder.BonusInfoProduct, error) {
+
 	pi := struct_folder.BonusInfoProduct{
 		Characteristic: []map[string]string{},
 		Photo:          []string{},
 		Variants:       struct_folder.Variant{},
 		Categories:     []string{},
 	}
+
 	err := db.getPhoto(productSlug, &pi)
+
 	if err != nil {
 		return pi, err
 	}
 
 	err = db.getProductCategories(productSlug, &pi)
+
 	if err != nil {
 		return pi, err
 	}
 
 	err = db.getVariants(productSlug, &pi)
+
 	if err != nil {
 		return pi, err
 	}
+
 	err = db.getCharacteristic(productSlug, &pi)
+	fmt.Println("CHAR", err)
+
 	if err != nil {
 		return pi, err
 	}
+
 	err = db.getDescription(productSlug, &pi)
+
+	if err != nil {
+		return pi, err
+	}
+
+	err = db.Db.QueryRow(
+		`SELECT name FROM products WHERE slug = ?`,
+		productSlug,
+	).Scan(&pi.Name)
+
 	if err != nil {
 		return pi, err
 	}
@@ -635,7 +680,6 @@ WHERE id = ?`
 }
 
 func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
-	// Защита: если ID 0, обновление не пойдет, чтобы не затереть данные
 	if data.ID <= 0 {
 		return fmt.Errorf("invalid product ID: %d", data.ID)
 	}
@@ -645,78 +689,448 @@ func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
 		return err
 	}
 
-	// 1. Основные данные
-	_, err = tx.Exec(`UPDATE products SET name = ?, description = ? WHERE id = ?`,
-		data.Name, data.Description, data.ID)
-	if err != nil {
+	// helper для rollback
+	fail := func(err error) error {
 		tx.Rollback()
 		return err
 	}
 
-	// 2. ВАРИАНТЫ (Удаляем старые связи товара, записываем новые)
-	tx.Exec(`DELETE FROM product_variants WHERE product_id = ?`, data.ID)
-	for i := range data.Variants.Value {
-		tx.Exec(`INSERT INTO product_variants (product_id, value, unit, price) VALUES (?, ?, ?, ?)`,
-			data.ID, data.Variants.Value[i], data.Variants.Unit, data.Variants.Price[i])
+	// ======================
+	// 1. ОСНОВНЫЕ ДАННЫЕ
+	// ======================
+	_, err = tx.Exec(`
+		UPDATE products 
+		SET name = ?, description = ? 
+		WHERE id = ?`,
+		data.Name, data.Description, data.ID,
+	)
+	if err != nil {
+		return fail(err)
 	}
 
-	// 3. ХАРАКТЕРИСТИКИ (Только обновление связей)
-	tx.Exec(`DELETE FROM product_attributes WHERE product_id = ?`, data.ID)
+	// ======================
+	// 2. ВАРИАНТЫ
+	// ======================
+	_, err = tx.Exec(`DELETE FROM product_variants WHERE product_id = ?`, data.ID)
+	if err != nil {
+		return fail(err)
+	}
+
+	// защита от кривых данных
+	if len(data.Variants.Value) != len(data.Variants.Price) {
+		return fail(fmt.Errorf("variants length mismatch"))
+	}
+
+	for i := range data.Variants.Value {
+		_, err := tx.Exec(`
+			INSERT INTO product_variants (product_id, value, unit, price)
+			VALUES (?, ?, ?, ?)`,
+			data.ID,
+			data.Variants.Value[i],
+			data.Variants.Unit,
+			data.Variants.Price[i],
+		)
+		if err != nil {
+			return fail(err)
+		}
+	}
+
+	// ======================
+	// 3. ХАРАКТЕРИСТИКИ
+	// ======================
+	_, err = tx.Exec(`DELETE FROM product_attributes WHERE product_id = ?`, data.ID)
+	if err != nil {
+		return fail(err)
+	}
+
 	for _, char := range data.Characteristics {
 		var charID int64
-		// Ищем существующую пару ключ-значение
-		err := tx.QueryRow(`SELECT id FROM characteristics WHERE key = ? AND value = ?`, char.Key, char.Value).Scan(&charID)
+
+		err := tx.QueryRow(`
+			SELECT id FROM characteristics 
+			WHERE key = ? AND value = ?`,
+			char.Key, char.Value,
+		).Scan(&charID)
+
 		if err != nil {
-			// Если такой нет — создаем новую
-			res, _ := tx.Exec(`INSERT INTO characteristics (key, value) VALUES (?, ?)`, char.Key, char.Value)
+			res, err := tx.Exec(`
+				INSERT INTO characteristics (key, value) 
+				VALUES (?, ?)`,
+				char.Key, char.Value,
+			)
+			if err != nil {
+				return fail(err)
+			}
 			charID, _ = res.LastInsertId()
 		}
-		// Привязываем к товару
-		tx.Exec(`INSERT INTO product_attributes (product_id, characteristic_id) VALUES (?, ?)`, data.ID, charID)
+
+		_, err = tx.Exec(`
+			INSERT INTO product_attributes (product_id, characteristic_id)
+			VALUES (?, ?)`,
+			data.ID, charID,
+		)
+		if err != nil {
+			return fail(err)
+		}
 	}
 
+	// ======================
 	// 4. ПОДКАТЕГОРИИ
-	tx.Exec(`DELETE FROM product_subcategories WHERE product_id = ?`, data.ID)
+	// ======================
+	_, err = tx.Exec(`DELETE FROM product_subcategories WHERE product_id = ?`, data.ID)
+	if err != nil {
+		return fail(err)
+	}
+
 	for _, subSlug := range data.Subcategories {
 		if subSlug == "" {
 			continue
 		}
-		_, err = tx.Exec(`INSERT INTO product_subcategories (product_id, subcategory_slug) VALUES (?, ?)`,
-			data.ID, subSlug)
+
+		_, err = tx.Exec(`
+			INSERT INTO product_subcategories (product_id, subcategory_slug)
+			VALUES (?, ?)`,
+			data.ID, subSlug,
+		)
 		if err != nil {
-			tx.Rollback()
+			return fail(err)
+		}
+	}
+
+	// ======================
+	// 5. ФОТО (без удаления с диска пока)
+	// ======================
+	var toDelete []string
+
+	rows, err := tx.Query(`
+		SELECT url FROM product_photos 
+		WHERE product_id = ?`, data.ID)
+
+	if err != nil {
+		return fail(err)
+	}
+
+	for rows.Next() {
+		var dbUrl string
+		rows.Scan(&dbUrl)
+
+		stillExists := false
+		for _, current := range data.ExistingPhotos {
+			if dbUrl == current {
+				stillExists = true
+				break
+			}
+		}
+
+		if !stillExists {
+			toDelete = append(toDelete, dbUrl)
+		}
+	}
+	rows.Close()
+
+	// пересоздаём таблицу
+	_, err = tx.Exec(`DELETE FROM product_photos WHERE product_id = ?`, data.ID)
+	if err != nil {
+		return fail(err)
+	}
+
+	for _, url := range data.ExistingPhotos {
+		_, err = tx.Exec(`
+			INSERT INTO product_photos (product_id, url)
+			VALUES (?, ?)`,
+			data.ID, url,
+		)
+		if err != nil {
+			return fail(err)
+		}
+	}
+
+	for _, newUrl := range data.NewPhotoPaths {
+		_, err = tx.Exec(`
+			INSERT INTO product_photos (product_id, url)
+			VALUES (?, ?)`,
+			data.ID, newUrl,
+		)
+		if err != nil {
+			return fail(err)
+		}
+	}
+
+	// ======================
+	// COMMIT
+	// ======================
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// ======================
+	// УДАЛЕНИЕ ФАЙЛОВ ПОСЛЕ КОММИТА
+	// ======================
+	for _, path := range toDelete {
+		os.Remove(path)
+	}
+
+	return nil
+}
+
+func (db *DB) CreateProduct(data struct_folder.UpdateProductData) (int64, error) {
+	tx, err := db.Db.Begin()
+	if err != nil {
+		return 0, err
+	}
+
+	fail := func(err error) (int64, error) {
+		tx.Rollback()
+		return 0, err
+	}
+
+	// ======================
+	// 1. SLUG
+	// ======================
+	slug := generateSlug(data.Name)
+
+	// ======================
+	// 2. PRODUCT
+	// ======================
+	res, err := tx.Exec(`
+		INSERT INTO products (name, description, slug)
+		VALUES (?, ?, ?)`,
+		data.Name, data.Description, slug,
+	)
+	if err != nil {
+		return fail(err)
+	}
+
+	productID, _ := res.LastInsertId()
+
+	// ======================
+	// 3. ВАРИАНТЫ
+	// ======================
+	for i := range data.Variants.Value {
+		_, err := tx.Exec(`
+			INSERT INTO product_variants (product_id, value, unit, price)
+			VALUES (?, ?, ?, ?)`,
+			productID,
+			data.Variants.Value[i],
+			data.Variants.Unit,
+			data.Variants.Price[i],
+		)
+		if err != nil {
+			return fail(err)
+		}
+	}
+
+	// ======================
+	// 4. ХАРАКТЕРИСТИКИ
+	// ======================
+	for _, char := range data.Characteristics {
+		var charID int64
+
+		err := tx.QueryRow(`
+			SELECT id FROM characteristics 
+			WHERE key = ? AND value = ?`,
+			char.Key, char.Value,
+		).Scan(&charID)
+
+		if err != nil {
+			res, err := tx.Exec(`
+				INSERT INTO characteristics (key, value)
+				VALUES (?, ?)`,
+				char.Key, char.Value,
+			)
+			if err != nil {
+				return fail(err)
+			}
+			charID, _ = res.LastInsertId()
+		}
+
+		_, err = tx.Exec(`
+			INSERT INTO product_attributes (product_id, characteristic_id)
+			VALUES (?, ?)`,
+			productID, charID,
+		)
+		if err != nil {
+			return fail(err)
+		}
+	}
+
+	// ======================
+	// 5. ПОДКАТЕГОРИИ
+	// ======================
+	for _, sub := range data.Subcategories {
+		_, err := tx.Exec(`
+			INSERT INTO product_subcategories (product_id, subcategory_slug)
+			VALUES (?, ?)`,
+			productID, sub,
+		)
+		if err != nil {
+			log.Println("INSERT SUBCATEGORY ERROR:", err)
+			return fail(err)
+		}
+	}
+
+	// ======================
+	// 6. ФОТО
+	// ======================
+	for i, url := range data.NewPhotoPaths {
+		_, err := tx.Exec(`
+			INSERT INTO product_photos (product_id, url, position)
+			VALUES (?, ?, ?)`,
+			productID, url, i,
+		)
+		if err != nil {
+			return fail(err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return productID, nil
+}
+
+func generateSlug(name string) string {
+	translit := map[rune]string{
+		'а': "a", 'б': "b", 'в': "v", 'г': "g", 'д': "d",
+		'е': "e", 'ё': "e", 'ж': "zh", 'з': "z", 'и': "i",
+		'й': "y", 'к': "k", 'л': "l", 'м': "m", 'н': "n",
+		'о': "o", 'п': "p", 'р': "r", 'с': "s", 'т': "t",
+		'у': "u", 'ф': "f", 'х': "h", 'ц': "ts", 'ч': "ch",
+		'ш': "sh", 'щ': "sch", 'ы': "y", 'э': "e", 'ю': "yu",
+		'я': "ya",
+	}
+
+	name = strings.ToLower(name)
+
+	var result strings.Builder
+
+	for _, ch := range name {
+		if val, ok := translit[ch]; ok {
+			result.WriteString(val)
+		} else if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') {
+			result.WriteRune(ch)
+		} else {
+			result.WriteRune('-')
+		}
+	}
+
+	slug := result.String()
+
+	// убрать двойные -
+	slug = regexp.MustCompile(`-+`).ReplaceAllString(slug, "-")
+
+	// убрать - в начале/конце
+	slug = strings.Trim(slug, "-")
+
+	return slug
+}
+
+func (db *DB) AddSubcategory(subCat string, catSlug string) error {
+	slugSubCat := generateSlug(subCat)
+
+	query := `
+	INSERT INTO subcategories(slug, parent_slug, name) VALUES(?, ?, ?)
+	`
+
+	_, err := db.Db.Exec(query, slugSubCat, catSlug, subCat)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) AddCategory(cat string) error {
+	slugCat := generateSlug(cat)
+	query := `insert into categories(slug, name) VALUES(?, ?)`
+
+	_, err := db.Db.Exec(query, slugCat, cat)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) DeleteCategory(catSlug string, table string) error {
+	query := fmt.Sprintf(`delete from %s WHERE slug = ?`, table)
+
+	_, err := db.Db.Exec(query, catSlug)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) DeleteProduct(productID int) error {
+
+	// ======================
+	// GET PHOTOS
+	// ======================
+	rows, err := db.Db.Query(`
+        SELECT url
+        FROM product_photos
+        WHERE product_id = ?
+    `, productID)
+
+	if err != nil {
+		return err
+	}
+
+	defer rows.Close()
+
+	var photos []string
+
+	for rows.Next() {
+
+		var path string
+
+		if err := rows.Scan(&path); err != nil {
 			return err
 		}
+
+		photos = append(photos, path)
 	}
 
-	// 5. ФОТО (УДАЛЕНИЕ ТОЛЬКО С ДИСКА)
-	rows, err := tx.Query(`SELECT url FROM product_photos WHERE product_id = ?`, data.ID)
-	if err == nil {
-		for rows.Next() {
-			var dbUrl string
-			rows.Scan(&dbUrl)
-			stillExists := false
-			for _, current := range data.ExistingPhotos {
-				if dbUrl == current {
-					stillExists = true
-					break
-				}
-			}
-			if !stillExists {
-				os.Remove(dbUrl)
-			}
+	// ======================
+	// DELETE PRODUCT
+	// ======================
+	_, err = db.Db.Exec(`
+        DELETE FROM products
+        WHERE id = ?
+    `, productID)
+
+	if err != nil {
+		return err
+	}
+
+	// ======================
+	// DELETE FILES
+	// ======================
+	for _, path := range photos {
+
+		err := os.Remove(path)
+
+		if err != nil {
+
+			log.Println(
+				"DELETE FILE ERROR:",
+				err,
+			)
 		}
-		rows.Close()
 	}
 
-	// 6. СИНХРОНИЗАЦИЯ ФОТО В ТАБЛИЦЕ
-	tx.Exec(`DELETE FROM product_photos WHERE product_id = ?`, data.ID)
-	for _, url := range data.ExistingPhotos {
-		tx.Exec(`INSERT INTO product_photos (product_id, url) VALUES (?, ?)`, data.ID, url)
-	}
-	for _, newUrl := range data.NewPhotoPaths {
-		tx.Exec(`INSERT INTO product_photos (product_id, url) VALUES (?, ?)`, data.ID, newUrl)
-	}
+	return nil
+}
 
-	return tx.Commit()
+func (db *DB) UpdateCategory(newCatName string, slug string, table string) error {
+	query := fmt.Sprintf(`UPDATE %s SET name = ? WHERE slug = ?`, table)
+	_, err := db.Db.Exec(query, newCatName, slug)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

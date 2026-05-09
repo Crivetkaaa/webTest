@@ -13,15 +13,27 @@ async function getProducts() {
     const bigCat = document.getElementById("category")
     const miniCat = document.getElementById("subcategory")
 
+    const response = await fetch(
+        `/api/get_products?type=${bigCat.value}&category=${miniCat.value}&offset=${offset}&limit=${limit}`
+    )
 
-    const response = await fetch(`/api/get_products?type=${bigCat.value}&category=${miniCat.value}&offset=${offset}&limit=${limit}`)
-    const data = await response.json()
+    let data = await response.json()
 
-    if (!data || data.length < limit) {
-        const loadMore = document.getElementById("getProduct")
-        loadMore.style.display = "none"
+    // защита от null
+    if (!Array.isArray(data)) {
+        data = []
     }
+
+    const loadMore = document.getElementById("getProduct")
+
+    if (data.length < limit) {
+        loadMore.style.display = "none"
+    } else {
+        loadMore.style.display = "block"
+    }
+
     offset += data.length
+
     return data
 }
 
@@ -29,21 +41,38 @@ function addOption(cat) {
     const bigCat = document.getElementById("category")
     const miniCat = document.getElementById("subcategory")
 
+    bigCat.innerHTML = `<option value="">Все категории</option>`
+    miniCat.innerHTML = `<option value="">Все подкатегории</option>`
+
     cat.forEach(element => {
+
+        // ======================
+        // CATEGORY
+        // ======================
         const option = document.createElement("option")
 
         option.textContent = element.name
         option.value = element.slug
+
         bigCat.appendChild(option)
-        element.mininav.forEach(el => {
+
+        // ======================
+        // SUBCATEGORIES
+        // ======================
+        const subcategories = element.mininav || []
+
+        subcategories.forEach(el => {
+
             const miniOption = document.createElement("option")
 
-            miniOption.textContent = el.name
+            miniOption.textContent =
+                `${element.name} > ${el.name}`
+
             miniOption.value = el.slug
+
             miniCat.appendChild(miniOption)
         })
-
-    });
+    })
 }
 
 function drawProduct(products, append) {
@@ -99,20 +128,18 @@ function title(text) {
     el.style.marginBottom = "8px"
     return el
 }
-
-function drawModal(data, product, allSubcategories) {
+function drawModal(product, allSubcategories, isCreate = false) {
     const modal = document.getElementById("modal")
     const content = modal.querySelector(".modal-content")
-    content.innerHTML = "" // Очистка перед отрисовкой
+    content.innerHTML = ""
 
     // ======================
     // 🏷 НАЗВАНИЕ
     // ======================
-    const nameValue = product.querySelector(".name")?.textContent || product.children?.[1]?.textContent || ""
     const nameInput = document.createElement("input")
-    nameInput.value = nameValue
+    nameInput.value = product.name
     nameInput.className = "input"
-    
+
     const nameBlock = document.createElement("div")
     nameBlock.className = "block"
     nameBlock.appendChild(title("Название"))
@@ -124,16 +151,15 @@ function drawModal(data, product, allSubcategories) {
     // ======================
     const photosBlock = document.createElement("div")
     photosBlock.className = "block"
+
     const photosContainer = document.createElement("div")
     photosContainer.className = "photos"
 
     const createPhotoElem = (src, file = null) => {
         const wrapper = document.createElement("div")
         wrapper.className = "photo-wrapper"
-        
-        // Сохраняем файл прямо в объекте элемента, если он есть
+
         if (file) wrapper._file = file
-        // Сохраняем старый путь, если это не новый файл
         else wrapper.dataset.path = src
 
         const img = document.createElement("img")
@@ -150,7 +176,9 @@ function drawModal(data, product, allSubcategories) {
         return wrapper
     }
 
-    data.Photo.forEach(src => photosContainer.appendChild(createPhotoElem(src)))
+    product.photos.forEach(src => {
+        photosContainer.appendChild(createPhotoElem(src))
+    })
 
     const addPhotoInput = document.createElement("input")
     addPhotoInput.type = "file"
@@ -178,39 +206,55 @@ function drawModal(data, product, allSubcategories) {
     // 📝 ОПИСАНИЕ
     // ======================
     const desc = document.createElement("textarea")
-    desc.value = data.Decscription || ""
+    desc.value = product.description
     desc.className = "input"
-    content.appendChild(title("Описание"))
-    content.appendChild(desc)
+
+    const descBlock = document.createElement("div")
+    descBlock.className = "block"
+    descBlock.appendChild(title("Описание"))
+    descBlock.appendChild(desc)
+    content.appendChild(descBlock)
 
     // ======================
-    // 📦 ВАРИАНТЫ
+    // 📦 ВАРИАНТЫ + UNIT
     // ======================
     const variantsBlock = document.createElement("div")
     variantsBlock.className = "block"
+
+    const unitInput = document.createElement("input")
+    unitInput.className = "input"
+    unitInput.placeholder = "Единица (ml, size, kg...)"
+    unitInput.value = product.variants.unit || ""
+
     const variantsContainer = document.createElement("div")
 
     const createVariantRow = (val = "", pr = "") => {
         const row = document.createElement("div")
         row.className = "variant-row"
+
         row.innerHTML = `
-            <input class="v-val" value="${val}" placeholder="${data.Variants.Unit}">
+            <input class="v-val" value="${val}" placeholder="Значение">
             <input class="v-price" value="${pr}" placeholder="Цена">
             <button class="remove-btn">❌</button>
         `
+
         row.querySelector(".remove-btn").onclick = () => row.remove()
         return row
     }
 
-    data.Variants.Value.forEach((v, i) => {
-        variantsContainer.appendChild(createVariantRow(v, data.Variants.Price[i]))
+    product.variants.value.forEach((v, i) => {
+        variantsContainer.appendChild(
+            createVariantRow(v, product.variants.price[i])
+        )
     })
 
     const addVariantBtn = document.createElement("button")
     addVariantBtn.textContent = "+ вариант"
-    addVariantBtn.onclick = () => variantsContainer.appendChild(createVariantRow())
+    addVariantBtn.onclick = () =>
+        variantsContainer.appendChild(createVariantRow())
 
     variantsBlock.appendChild(title("Варианты"))
+    variantsBlock.appendChild(unitInput)
     variantsBlock.appendChild(variantsContainer)
     variantsBlock.appendChild(addVariantBtn)
     content.appendChild(variantsBlock)
@@ -220,51 +264,56 @@ function drawModal(data, product, allSubcategories) {
     // ======================
     const attrBlock = document.createElement("div")
     attrBlock.className = "block"
+
     const attrContainer = document.createElement("div")
 
     const createAttrRow = (k = "", v = "") => {
         const row = document.createElement("div")
         row.className = "attr-row"
+
         row.innerHTML = `
             <input class="a-key" value="${k}" placeholder="Ключ">
             <input class="a-val" value="${v}" placeholder="Значение">
             <button class="remove-btn">❌</button>
         `
+
         row.querySelector(".remove-btn").onclick = () => row.remove()
         return row
     }
 
-    data.Characteristic.forEach(c => attrContainer.appendChild(createAttrRow(c.key, c.value)))
+    product.characteristics.forEach(c => {
+        attrContainer.appendChild(createAttrRow(c.key, c.value))
+    })
 
     const addAttrBtn = document.createElement("button")
     addAttrBtn.textContent = "+ характеристика"
-    addAttrBtn.onclick = () => attrContainer.appendChild(createAttrRow())
+    addAttrBtn.onclick = () =>
+        attrContainer.appendChild(createAttrRow())
 
     attrBlock.appendChild(title("Характеристики"))
     attrBlock.appendChild(attrContainer)
     attrBlock.appendChild(addAttrBtn)
     content.appendChild(attrBlock)
 
-    // 📂 КАТЕГОРИИ (НОВОЕ)
+    // ======================
+    // 📂 КАТЕГОРИИ
     // ======================
     const catBlock = document.createElement("div")
     catBlock.className = "block"
-    catBlock.appendChild(title("Подкатегории"))
 
     const catContainer = document.createElement("div")
-    catContainer.className = "categories-grid" // Сетка для чекбоксов
-    
+    catContainer.className = "categories-grid"
+
     allSubcategories.forEach(sub => {
         const label = document.createElement("label")
         label.className = "cat-label"
-        
+
         const checkbox = document.createElement("input")
         checkbox.type = "checkbox"
-        checkbox.value = sub.slug // Используем slug как ID
+        checkbox.value = sub.slug
         checkbox.className = "cat-checkbox"
-        
-        // Если слаг подкатегории есть в массиве data.Categories, отмечаем его
-        if (data.Categories && data.Categories.includes(sub.slug)) {
+
+        if (product.categories.includes(sub.slug)) {
             checkbox.checked = true
         }
 
@@ -272,127 +321,148 @@ function drawModal(data, product, allSubcategories) {
         label.append(` ${sub.name}`)
         catContainer.appendChild(label)
     })
-    
+
+    catBlock.appendChild(title("Подкатегории"))
     catBlock.appendChild(catContainer)
     content.appendChild(catBlock)
 
     // ======================
-    // 💾 СОХРАНЕНИЕ (ОБНОВЛЕНО)
+    // 💾 ACTIONS (SAVE + DELETE)
     // ======================
-    const save = document.createElement("button")
-    save.textContent = "Сохранить"
-    save.className = "save-btn"
+    const actions = document.createElement("div")
+    actions.className = "modal-actions"
 
-    save.onclick = async () => {
-    const productId = product.dataset.id;
-    const newName = nameInput.value.trim();
+    const saveBtn = document.createElement("button")
+    saveBtn.textContent = isCreate ? "Создать" : "Сохранить"
+    saveBtn.className = "save-btn"
 
-    // 1. Валидация
-    if (!productId || productId === "0") {
-        alert("Ошибка: ID товара не найден!");
-        return;
-    }
-    if (!newName) {
-        alert("Название товара не может быть пустым!");
-        return;
-    }
+    const deleteBtn = document.createElement("button")
+    deleteBtn.textContent = "Удалить товар"
+    deleteBtn.className = "delete-btn"
 
-    const formData = new FormData();
-    
-    // 2. Основные данные
-    formData.append("id", productId);
-    formData.append("name", newName);
-    formData.append("description", desc.value); // Должно быть определено выше в drawModal
+    // ---------------------
+    // SAVE
+    // ---------------------
+    saveBtn.onclick = async () => {
+        const formData = new FormData()
 
-    // 3. Сбор фото
-    const existing = []
-    photosContainer.querySelectorAll(".photo-wrapper").forEach(el => {
-        if (el._file) formData.append("newPhotos", el._file);
-        if (el.dataset.path) existing.push(el.dataset.path);
-    });
-    formData.append("existingPhotos", JSON.stringify(existing));
+        formData.append("name", nameInput.value)
+        formData.append("description", desc.value)
+        formData.append("variants_unit", unitInput.value)
 
-    // 4. Сбор Вариантов
-    const vars = { Unit: data.Variants.Unit, Value: [], Price: [] };
-    variantsContainer.querySelectorAll(".variant-row").forEach(row => {
-        const v = row.querySelector(".v-val").value.trim();
-        const p = row.querySelector(".v-price").value.trim();
-        if (v && p) { 
-            vars.Value.push(v); 
-            vars.Price.push(p); 
+        const existing = []
+        photosContainer.querySelectorAll(".photo-wrapper").forEach(el => {
+            if (el._file) formData.append("newPhotos", el._file)
+            if (el.dataset.path) existing.push(el.dataset.path)
+        })
+
+        formData.append("existingPhotos", JSON.stringify(existing))
+
+        const vars = { Unit: unitInput.value, Value: [], Price: [] }
+
+        variantsContainer.querySelectorAll(".variant-row").forEach(row => {
+            const v = row.querySelector(".v-val").value.trim()
+            const p = row.querySelector(".v-price").value.trim()
+            if (v && p) {
+                vars.Value.push(v)
+                vars.Price.push(p)
+            }
+        })
+
+        formData.append("variants", JSON.stringify(vars))
+
+        const attrs = []
+        attrContainer.querySelectorAll(".attr-row").forEach(row => {
+            const k = row.querySelector(".a-key").value.trim()
+            const v = row.querySelector(".a-val").value.trim()
+            if (k) attrs.push({ key: k, value: v })
+        })
+
+        formData.append("characteristics", JSON.stringify(attrs))
+
+        const selected = []
+        catContainer.querySelectorAll(".cat-checkbox:checked").forEach(cb => {
+            selected.push(cb.value)
+        })
+
+        formData.append("subcategories", JSON.stringify(selected))
+
+        if (!isCreate) formData.append("id", product.id)
+
+        const url = isCreate ? "/admin/create_product" : "/admin/update_product"
+
+        const res = await fetch(url, { method: "POST", body: formData })
+
+        if (res.ok) {
+            alert(isCreate ? "Создано!" : "Сохранено!")
+            location.reload()
         }
-    });
-    formData.append("variants", JSON.stringify(vars));
+    }
 
-    // 5. Сбор Характеристик
-    const attrs = [];
-    attrContainer.querySelectorAll(".attr-row").forEach(row => {
-        const k = row.querySelector(".a-key").value.trim();
-        const v = row.querySelector(".a-val").value.trim();
-        if (k) attrs.push({ key: k, value: v });
-    });
-    formData.append("characteristics", JSON.stringify(attrs));
+    // ---------------------
+    // DELETE
+    // ---------------------
+    deleteBtn.onclick = async () => {
+        const ok = confirm("Вы действительно хотите удалить товар?")
+        if (!ok) return
 
-    // 6. Сбор Категорий
-    const selectedCats = [];
-    // Используем тот контейнер, где отрисовывали чекбоксы
-    catContainer.querySelectorAll(".cat-checkbox:checked").forEach(cb => {
-        selectedCats.push(cb.value);
-    });
-    formData.append("subcategories", JSON.stringify(selectedCats));
+        const res = await fetch(`/admin/delete_product/${product.id}`, {
+            method: "DELETE"
+        })
 
-    // 7. Отправка
-    try {
-        const res = await fetch("/admin/update_product", { method: "POST", body: formData });
-        if (res.ok) { 
-            alert("Сохранено!");
-            modal.classList.remove("active"); 
-            location.reload(); 
+        if (res.ok) {
+            alert("Товар удалён")
+            modal.classList.remove("active")
+            location.reload()
         } else {
-            const errData = await res.json();
-            alert("Ошибка сервера: " + (errData.error || "Неизвестная ошибка"));
+            alert("Ошибка удаления")
         }
-    } catch (e) {
-        console.error(e);
-        alert("Ошибка сети или сервера");
+    }
+
+    actions.appendChild(saveBtn)
+    if (!isCreate) actions.appendChild(deleteBtn)
+
+    content.appendChild(actions)
+}
+async function getProductsInfo(card) {
+    const res = await fetch(`/api/product_info/${card.dataset.slug}`)
+    const data = await res.json()
+
+    const categories = await getCategories()
+
+const allSubcategories = categories.flatMap(c =>
+    (c.mininav || []).map(m => ({
+        slug: m.slug,
+        name: `${c.name} > ${m.name}`
+    }))
+)
+
+    const product = normalizeProduct(card, data)
+
+    drawModal(product, allSubcategories)
+
+    document.getElementById("modal").classList.add("active")
+}
+function normalizeProduct(card, data) {
+    return {
+        id: card.dataset.id,
+        slug: card.dataset.slug,
+
+        name: data.Name || "",
+        description: data.Decscription || "",
+
+        photos: data.Photo || [],
+
+        variants: {
+            unit: data.Variants?.Unit || "",
+            value: data.Variants?.Value || [],
+            price: data.Variants?.Price || []
+        },
+
+        characteristics: data.Characteristic || [],
+        categories: data.Categories || []
     }
 }
-
-
-    // Собираем всё в конце
-    // (Убедитесь, что appendChild идут в нужном вам порядке)
-    content.appendChild(save)
-
-}
-
-
-async function getProductsInfo(product) {
-    // 1. Получаем инфо о товаре
-    const product_info = await fetch(`/api/product_info/${product.dataset.slug}`)
-    const data = await product_info.json()
-
-    // 2. Получаем все категории (через твою функцию или fetch)
-    const cat = await getCategories() 
-    
-    // 3. Собираем все подкатегории (mininav) в один плоский массив
-    let allSubcategories = []
-    cat.forEach(c => {
-        if (c.mininav) {
-            c.mininav.forEach(m => {
-                allSubcategories.push({
-                    slug: m.slug,
-                    name: `${c.name} > ${m.name}` // Для наглядности добавим имя родителя
-                })
-            })
-        }
-    })
-
-    const modal = document.getElementById("modal")
-    // 4. Передаем плоский список в drawModal
-    await drawModal(data, product, allSubcategories)
-    modal.classList.add("active")
-}
-
 
 function addProduct() {
     refreshProducts(true)
@@ -417,4 +487,39 @@ document.addEventListener("click", (e) => {
     if (e.target === modal) {
         modal.classList.remove("active")
     }
+})
+
+
+function createEmptyProduct() {
+    return {
+        id: null,
+        slug: "",
+        name: "",
+        description: "",
+        photos: [],
+        variants: {
+            unit: "",
+            value: [],
+            price: []
+        },
+        characteristics: [],
+        categories: []
+    }
+}
+
+document.getElementById("addButton").addEventListener("click", async () => {
+    const categories = await getCategories()
+
+    const allSubcategories = categories.flatMap(c =>
+        (c.mininav || []).map(m => ({
+            slug: m.slug,
+            name: `${c.name} > ${m.name}`
+        }))
+    )
+
+    const emptyProduct = createEmptyProduct()
+
+    drawModal(emptyProduct, allSubcategories, true)
+
+    document.getElementById("modal").classList.add("active")
 })

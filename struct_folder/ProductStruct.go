@@ -7,7 +7,7 @@ var photos = []string{
 
 type Variant struct {
 	Id    []int
-	Value []int
+	Value []string
 	Price []int
 	Unit  string
 }
@@ -31,6 +31,7 @@ type MiniProducts struct {
 }
 
 type BonusInfoProduct struct {
+	Name           string
 	Decscription   string
 	Characteristic []map[string]string
 	Photo          []string

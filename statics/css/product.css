@@ -90,17 +90,20 @@
 
 /* главное фото */
 .modal-main-container {
-    flex: 1;
-    min-width: 0;   /* критично */
-    max-width: fit-content;
+    width: 100%;
+    height: 80vh;        /* фиксируем высоту области */
+    max-width: 650px;    /* чтобы не растягивалось слишком */
     display: flex;
-    justify-content: flex-start;
-    gap: 100000px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
+
 .modal-main-image {
-    max-height: 80vh;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;   /* КЛЮЧЕВО */
     display: block;
 }
 
