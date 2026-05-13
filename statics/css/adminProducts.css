@@ -1,0 +1,616 @@
+/* ==========================================================================
+   1. ОБЩИЕ СТИЛИ СТРАНИЦЫ И КНОПОК
+   ========================================================================== */
+body {
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+}
+
+.refresh-btn { background-color: #ffffff; border-color: #e2e8f0; color: #475569; }
+.refresh-btn:hover { background-color: #f1f5f9; }
+
+.add-btn { background-color: #4f46e5; color: #ffffff; }
+.add-btn:hover { background-color: #4338ca; }
+
+.category-btn { background-color: #0f172a; color: #ffffff; }
+.category-btn:hover { background-color: #000000; }
+
+/* Компактная сетка для карточек товаров */
+#productCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Уменьшили минимальную ширину карточки */
+    gap: 12px; /* Меньше расстояние между карточками */
+    padding: 12px 0;
+}
+
+/* Компактная карточка товара */
+.product-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px; /* Чуть острее углы */
+    padding: 8px; /* Меньше внутренний отступ */
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+/* Уменьшенное изображение товара */
+.product-card img {
+    width: 100%;
+    height: 110px; /* Фиксированная уменьшенная высота */
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+/* Компактный заголовок товара */
+.product-card .product-title {
+    font-size: 13px; /* Меньше шрифт */
+    font-weight: 600;
+    line-height: 1.3;
+    color: #1e293b;
+    /* Ограничение в 2 строки, чтобы карточки были одной высоты */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    height: 34px; 
+}
+
+/* Компактная цена и доп. инфо */
+.product-card .product-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4f46e5;
+}
+
+.product-card .product-meta {
+    font-size: 11px;
+    color: #64748b;
+}
+
+
+#getProduct {
+    display: block;
+    margin: 24px auto;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#getProduct:hover { background-color: #f8fafc; }
+
+/* ==========================================================================
+   2. ПАНЕЛЬ ФИЛЬТРОВ (АДАПТИВНАЯ)
+   ========================================================================== */
+.filters-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+}
+
+.filters-bar select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    min-width: 160px;
+    cursor: pointer;
+}
+.filters-bar select:focus { border-color: #6366f1; ring: 2px #e0e7ff; }
+
+/* На мобильных устройствах элементы фильтра занимают всю ширину */
+@media (max-width: 640px) {
+    .filters-bar { flex-direction: column; }
+    .filters-bar select, .btn { width: 100%; justify-content: center; }
+}
+/* ==========================================================================
+   3. МОДАЛЬНОЕ ОКНО (ИСПРАВЛЕНО ДЛЯ ЭКРАНОВ < 450px)
+   ========================================================================== */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: 12px; /* Уменьшили внешние поля на мобильных */
+}
+
+.modal.active { display: flex; }
+
+.modal-content {
+    background: #ffffff;
+    padding: 20px; /* Уменьшили внутренний padding, чтобы освободить место для инпутов */
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box; /* Гарантирует правильный расчет ширины */
+}
+
+@media (min-width: 640px) {
+    .modal-content { padding: 28px; }
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 28px;
+    color: #94a3b8;
+    cursor: pointer;
+    background: none;
+    border: none;
+    line-height: 1;
+    padding: 4px;
+}
+.modal-close-btn:hover { color: #1e293b; }
+
+.modal-content .block {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.modal-content .block:last-of-type { border-bottom: none; }
+
+.modal-content .input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-top: 4px;
+    outline: none;
+    box-sizing: border-box;
+}
+.modal-content .input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+
+textarea.input { min-height: 100px; resize: vertical; }
+
+.modal-content .block > button {
+    margin-top: 10px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.modal-content .block > button:hover { background: #e2e8f0; color: #0f172a; }
+
+/* ==========================================================================
+   4. КОМПОНЕНТЫ ВНУТРИ МОДАЛКИ (БЕЗОПАСНЫЙ СЖАТЫЙ ИНТЕРФЕЙС)
+   ========================================================================== */
+.photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.photo-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.photo-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.remove-photo-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ИСПРАВЛЕНИЕ: Безопасные гибкие строки для мобильных устройств */
+.variant-row, .attr-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Разрешаем инпутам уменьшаться до нуля, чтобы они не ломали контейнер */
+.variant-row input, .attr-row input {
+    flex: 1;
+    min-width: 0; 
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* Кнопка удаления с фиксированной шириной, чтобы инпуты её не сжимали */
+.variant-row .remove-btn, .attr-row .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 4px;
+    font-size: 14px;
+    flex-shrink: 0; 
+}
+
+/* Сетка подкатегорий */
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.cat-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+}
+.cat-label:hover { background: #f8fafc; }
+
+.cat-checkbox {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Кнопки действий */
+.modal-actions {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 2px solid #f1f5f9;
+}
+
+.save-btn {
+    background-color: #22c55e;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    flex: 1;
+    max-width: 200px;
+}
+.save-btn:hover { background-color: #16a34a; }
+
+.delete-btn {
+    background-color: transparent;
+    color: #ef4444;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    border: 1px solid #fca5a5;
+    cursor: pointer;
+}
+.delete-btn:hover { background-color: #fef2f2; border-color: #ef4444; }
+
+@media (max-width: 480px) {
+    .modal-actions { flex-direction: column; }
+    .save-btn, .delete-btn { max-width: 100%; width: 100%; }
+}
+
+/* ==========================================================================
+   5. МЕНЕДЖЕР КАТЕГОРИЙ И ПОДКАТЕГОРИЙ
+   ========================================================================== */
+
+/* Контейнер модального окна категорий */
+.category-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+/* Шапка модального окна */
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.category-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+/* Обертка для заголовка с кнопкой "Назад" */
+.category-header > div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Список элементов категорий */
+.categories-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 50vh; /* Ограничение высоты со скроллом для длинных списков */
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* Строка категории / подкатегории */
+.category-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+.category-item:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* Текстовый блок (Название + Слаг) */
+.category-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0; /* Важно для предотвращения распирания текстом */
+}
+
+.category-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Обрезает слишком длинные названия трехточием */
+}
+
+.category-slug {
+    font-size: 12px;
+    color: #64748b;
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Блок кнопок управления */
+.category-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0; /* Запрещает кнопкам сжиматься */
+}
+
+/* Кнопка "Открыть" подкатегории */
+.open-category-btn {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.open-category-btn:hover {
+    background-color: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+
+/* Кнопка редактирования (Карандаш) */
+.edit-category-btn {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.edit-category-btn:hover {
+    background-color: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+/* Кнопка "Назад" */
+.back-btn {
+    background: none;
+    border: none;
+    color: #4f46e5;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    transition: color 0.2s;
+}
+.back-btn:hover { color: #3730a3; }
+
+/* Пустой блок подкатегорий */
+.empty-block {
+    text-align: center;
+    padding: 32px 16px;
+    color: #94a3b8;
+    font-size: 14px;
+    background: #f8fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 10px;
+}
+
+/* ==========================================================================
+   6. ФОРМА РЕДАКТИРОВАНИЯ И СОЗДАНИЯ (EDITOR)
+   ========================================================================== */
+.category-editor {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.category-editor h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 20px;
+}
+
+.category-editor .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Блок кнопок в редакторе (Сохранить + Удалить) */
+.editor-actions {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.editor-actions .save-btn {
+    flex: 1;
+    max-width: 160px;
+}
+
+.editor-actions .delete-btn {
+    background-color: transparent;
+    color: #ef4444;
+    border: 1px solid #fca5a5;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.editor-actions .delete-btn:hover {
+    background-color: #fef2f2;
+    border-color: #ef4444;
+}
+
+/* ==========================================================================
+   7. СТИЛИ МОБИЛЬНОЙ АДАПТАЦИИ (ОКНА ДО 500px)
+   ========================================================================== */
+@media (max-width: 500px) {
+    /* Перестраиваем шапку на мобильных */
+    .category-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .category-header .save-btn {
+        width: 100%;
+        max-width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    /* Изменяем направление элементов в строке списка, если экран слишком узкий */
+    .category-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .category-actions {
+        justify-content: flex-end;
+        border-top: 1px dashed #e2e8f0;
+        padding-top: 8px;
+    }
+    
+    .open-category-btn {
+        flex: 1;
+        text-align: center;
+    }
+
+    /* Кнопки редактора во всю ширину */
+    .editor-actions {
+        flex-direction: column;
+    }
+    
+    .editor-actions .save-btn,
+    .editor-actions .delete-btn {
+        width: 100%;
+        max-width: 100%;
+        text-align: center;
+    }
+}

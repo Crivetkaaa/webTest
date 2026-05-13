@@ -133,6 +133,16 @@ function drawModal(product, allSubcategories, isCreate = false) {
     const content = modal.querySelector(".modal-content")
     content.innerHTML = ""
 
+    const closeBtn = document.createElement("button")
+
+    closeBtn.innerHTML = "×"
+    closeBtn.className = "modal-close-btn"
+
+    closeBtn.onclick = () => {
+        modal.classList.remove("active")
+    }
+
+    content.appendChild(closeBtn)
     // ======================
     // 🏷 НАЗВАНИЕ
     // ======================

@@ -4,104 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Панель управления заказами</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-block; }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-awaiting_payment { background: #ffedd5; color: #9a3412; }
-        .status-paid { background: #dbeafe; color: #1e40af; }
-        .status-completed { background: #dcfce7; color: #166534; }
+    <link rel="stylesheet" href="/statics/css/adminOrders.css">
 
-        .modal-overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5); justify-content: center; align-items: center;
-            z-index: 50;
-        }
-        .modal-content { background: white; padding: 24px; border-radius: 12px; width: 450px; max-height: 90vh; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; }
-        tr:hover { background: #f8fafc; }
-        .cursor-pointer { cursor: pointer; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen text-gray-900">
     <!-- NAV BAR -->
     {{ template "admin_navbar"}}
 
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Управление заказами</h1>
+        
+        <!-- ФИЛЬТР (Адаптирован под мобильные) -->
+        <div class="flex items-center justify-between sm:justify-start gap-3 bg-white p-2.5 rounded-lg shadow-sm border w-full sm:w-auto">
+            <span class="text-sm font-medium text-gray-500 italic">Фильтр:</span>
+            <select id="filter-status" onchange="applyFilter()" class="text-sm border-none focus:ring-0 cursor-pointer bg-transparent font-semibold text-gray-700 outline-none">
+                <option value="all">Все заказы</option>
+                <option value="pending">Ожидает оплаты</option>
+                <option value="paid">Оплачено</option>
+                <option value="completed">Выполнено</option>
+            </select>
+        </div>
+    </div>
 
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Управление заказами</h1>
-    
-    <!-- ФИЛЬТР -->
-    <div class="flex items-center gap-3 bg-white p-2 rounded-lg shadow-sm border">
-        <span class="text-sm font-medium text-gray-500 italic">Фильтр:</span>
-        <select id="filter-status" onchange="applyFilter()" class="text-sm border-none focus:ring-0 cursor-pointer bg-transparent font-semibold">
-            <option value="all">Все заказы</option>
-            <option value="pending">Ожидает оплаты</option>
-            <option value="paid">Оплачено</option>
-            <option value="completed">Выполнено</option>
-        </select>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table class="min-w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Дата заказа</th>
+                    <th class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Клиент</th>
+                    <th class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Телефон</th>
+                    <th class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Статус</th>
+                    <th class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Сумма</th>
+                </tr>
+            </thead>
+            <tbody id="orders-list">
+                <!-- ПРИМЕР СТРОКИ (Важно сохранить атрибуты data-label для мобильной версии) -->
+                <tr class="cursor-pointer" onclick="openModal(1)">
+                    <td data-label="ID" class="text-sm text-gray-600">#1024</td>
+                    <td data-label="Дата" class="text-sm text-gray-500">12.05.2026</td>
+                    <td data-label="Клиент" class="text-sm font-medium text-gray-900">Александр Иванов</td>
+                    <td data-label="Телефон" class="text-sm text-gray-600">+7 (999) 123-45-67</td>
+                    <td data-label="Статус"><span class="status-badge status-pending">Ожидает оплаты</span></td>
+                    <td data-label="Сумма" class="text-sm font-bold text-gray-900 md:text-left">14 500 ₽</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- КНОПКА ЗАГРУЗИТЬ ЕЩЁ -->
+        <div class="p-4 border-t flex justify-center bg-gray-50">
+            <button id="load-more-btn" onclick="loadMore()" class="w-full sm:w-auto bg-white border border-gray-300 px-6 py-2.5 rounded-lg shadow-sm hover:bg-gray-50 font-medium text-gray-700 transition text-sm">
+                Загрузить ещё
+            </button>
+        </div>
     </div>
 </div>
 
-<div class="bg-white rounded-lg shadow overflow-hidden">
-    <table>
-        <thead class="bg-gray-100">
-            <tr>
-                <th>ID</th>
-                <th>Дата заказа</th>
-                <th>Клиент</th>
-                <th>Телефон</th>
-                <th>Статус</th>
-                <th>Сумма</th>
-            </tr>
-        </thead>
-        <tbody id="orders-list"></tbody>
-    </table>
-    
-    <!-- Кнопку нужно вынести за пределы таблицы, но оставить внутри белого блока или под ним -->
-    <div class="p-4 border-t flex justify-center bg-gray-50">
-        <button id="load-more-btn" onclick="loadMore()" class="bg-white border border-gray-300 px-6 py-2 rounded-lg shadow-sm hover:bg-gray-50 font-medium text-gray-700 transition">
-            Загрузить ещё
-        </button>
-    </div>
-</div>
-</div>
-
-<!-- МОДАЛЬНОЕ ОКНО -->
+<!-- МОДАЛЬНОЕ ОКНО (Адаптировано под тач-скрины) -->
 <div id="order-modal" class="modal-overlay">
     <div class="modal-content shadow-2xl">
-        <h2 id="m-order-id" class="text-2xl font-bold mb-4 text-gray-800"></h2>
+        <h2 id="m-order-id" class="text-xl md:text-2xl font-bold mb-4 text-gray-800">Заказ #1024</h2>
         
-        <div class="space-y-2 mb-6 pb-4 border-b">
-            <p><b>Клиент:</b> <span id="m-name"></span></p>
-            <p><b>Телефон:</b> <span id="m-phone"></span></p>
+        <div class="space-y-3 mb-6 pb-4 border-b text-sm">
+            <p><b class="text-gray-500">Клиент:</b> <span id="m-name" class="text-gray-900 font-medium">Александр Иванов</span></p>
+            <p><b class="text-gray-500">Телефон:</b> <span id="m-phone" class="text-gray-900">+7 (999) 123-45-67</span></p>
             
-            <div class="flex items-center gap-2 py-2">
-                <b>Статус:</b>
-                <select id="m-status-select" class="border rounded px-2 py-1 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500">
-                    <option value="pending">Ожидает оплаты</option>
-                    <option value="paid">Оплачено</option>
-                    <option value="completed">Выполнено</option>
-                </select>
-                <button onclick="updateStatus()" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded hover:bg-indigo-700 transition">
-                    Обновить
-                </button>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 py-2">
+                <b class="text-gray-500">Статус:</b>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <select id="m-status-select" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 flex-grow sm:flex-grow-0">
+                        <option value="pending">Ожидает оплаты</option>
+                        <option value="paid">Оплачено</option>
+                        <option value="completed">Выполнено</option>
+                    </select>
+                    <button onclick="updateStatus()" class="bg-indigo-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium">
+                        Обновить
+                    </button>
+                </div>
             </div>
 
-            <p><b>Итого к оплате:</b> <span id="m-total" class="font-bold text-lg text-indigo-600"></span></p>
+            <p class="pt-2"><b class="text-gray-500">Итого к оплате:</b> <br class="sm:hidden"><span id="m-total" class="font-bold text-xl text-indigo-600">14 500 ₽</span></p>
         </div>
 
         <div>
-            <h3 class="font-bold mb-3 uppercase text-xs text-gray-500 tracking-wider">Состав заказа</h3>
-            <ul id="m-items" class="space-y-3"></ul>
+            <h3 class="font-bold mb-3 uppercase text-xs text-gray-400 tracking-wider">Состав заказа</h3>
+            <ul id="m-items" class="space-y-3 text-sm">
+                <li class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg">
+                    <span class="text-gray-800">Смартфон Apple iPhone 15</span>
+                    <span class="font-semibold text-gray-600 whitespace-nowrap">1 шт.</span>
+                </li>
+            </ul>
         </div>
 
-        <button onclick="closeModal()" class="w-full mt-8 bg-gray-800 hover:bg-black text-white font-medium py-2 rounded-lg transition">
+        <button onclick="closeModal()" class="w-full mt-8 bg-gray-900 hover:bg-black text-white font-medium py-3 rounded-lg transition text-sm">
             Закрыть
         </button>
     </div>
 </div>
+
+
+
 
 <script>
 let allOrders = []; 
