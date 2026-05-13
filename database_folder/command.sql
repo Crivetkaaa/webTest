@@ -79,14 +79,16 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- 11. Состав заказа (НОВАЯ ТАБЛИЦА)
-CREATE TABLE IF NOT EXISTS order_items (
+CREATE TABLE order_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
-    variant_id INTEGER NOT NULL,
+    variant_id INTEGER NOT NULL,        -- Оставляем ID для истории (БЕЗ FOREIGN KEY)
+    product_name TEXT NOT NULL,         -- Сюда жестко запишется имя товара
+    variant_value TEXT NOT NULL,        -- Сюда запишется объем/размер (например, "50")
+    variant_unit TEXT DEFAULT 'ml',     -- Единица измерения ("ml", "кг")
+    price_at_purchase INTEGER NOT NULL, -- Точная цена на момент покупки
     quantity INTEGER NOT NULL DEFAULT 1,
-    price_at_purchase INTEGER NOT NULL, -- Фиксируем цену на момент покупки!
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 -- 12. Пользователь
 CREATE TABLE IF NOT EXISTS users(

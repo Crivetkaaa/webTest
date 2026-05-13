@@ -529,9 +529,8 @@ func (db *DB) InsertOrder(info struct_folder.OrderData) error {
 	}
 
 	// =========================
-	// 2. Заказ (Сначала создаем запись в orders!)
+	// 2. Заказ
 	// =========================
-	// ВАЖНО: Мы вставляем в таблицу orders, а не order_items
 	res, err := tx.Exec(`
 		INSERT INTO orders(user_id, comment, total_price) 
 		VALUES (?, ?, ?)
@@ -545,14 +544,23 @@ func (db *DB) InsertOrder(info struct_folder.OrderData) error {
 	orderID := int(orderID64)
 
 	// =========================
-	// 3. Товары в заказе
+	// 3. Сохранение товаров в заказе (Архивный метод)
 	// =========================
 	for _, item := range info.Items {
-		// ОШИБКА БЫЛА ТУТ: Заменяем item.ID (0) на item.VariantID (3)
+		// Дефолтные заглушки на случай сбоя
+		valStr := ""
+		unitStr := "ml"
+
+		// Перед вставкой подсматриваем текущие Unit и Value варианта из БД
+		_ = tx.QueryRow(`
+			SELECT value, unit FROM product_variants WHERE id = ?
+		`, item.VariantID).Scan(&valStr, &unitStr)
+
+		// Записываем неизменяемую текстовую копию в историю order_items
 		_, err = tx.Exec(`
-			INSERT INTO order_items(order_id, variant_id, quantity, price_at_purchase)
-			VALUES (?, ?, ?, ?)
-		`, orderID, item.VariantID, item.Qty, item.Price)
+			INSERT INTO order_items(order_id, variant_id, product_name, variant_value, variant_unit, price_at_purchase, quantity)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`, orderID, item.VariantID, item.Name, valStr, unitStr, int(item.Price), item.Qty)
 
 		if err != nil {
 			return err
@@ -640,18 +648,16 @@ func (db *DB) GetOrdersAdmin(limit, offset int, status string) ([]struct_folder.
 }
 
 func (db *DB) getOrdersInfo(info *[]struct_folder.AdminInfo) error {
-	query :=
-		`
-	SELECT 
-    p.name, 
-    pv.value, 
-    pv.unit, 
-    oi.quantity, 
-    oi.price_at_purchase
-FROM order_items oi
-JOIN product_variants pv ON oi.variant_id = pv.id
-JOIN products p ON pv.product_id = p.id
-WHERE oi.order_id = ?
+	// Читаем сохраненные текстовые поля напрямую из истории без JOIN с каталогом товаров
+	query := `
+		SELECT 
+			product_name, 
+			variant_value, 
+			variant_unit, 
+			quantity, 
+			price_at_purchase
+		FROM order_items
+		WHERE order_id = ?
 	`
 	for i := range *info {
 		rows, err := db.Db.Query(query, (*info)[i].OrdersInfo.Id)
@@ -659,17 +665,24 @@ WHERE oi.order_id = ?
 			return err
 		}
 
-		var items []struct_folder.ProductInfo
+		// ВАЖНО: Инициализируем слайс как пустой массив [], а не через var.
+		// Благодаря этому json.Marshal вернет во фронтенд массив "ProductInfo": [], а не null.
+		items := []struct_folder.ProductInfo{}
+
 		for rows.Next() {
 			var item struct_folder.ProductInfo
 
+			// Сканируем исторические архивные данные в структуру ProductInfo
 			err := rows.Scan(&item.Name, &item.Value, &item.Unit, &item.Count, &item.Price)
 			if err != nil {
+				rows.Close()
 				return err
 			}
 			items = append(items, item)
 		}
 		rows.Close()
+
+		// Сохраняем массив обратно в заказ
 		(*info)[i].ProductInfo = items
 	}
 	return nil
