@@ -332,72 +332,204 @@ function drawModal(product, allSubcategories, isCreate = false) {
     const actions = document.createElement("div")
     actions.className = "modal-actions"
 
-    const saveBtn = document.createElement("button")
-    saveBtn.textContent = isCreate ? "Создать" : "Сохранить"
-    saveBtn.className = "save-btn"
+const saveBtn = document.createElement("button")
+saveBtn.textContent = isCreate ? "Создать" : "Сохранить"
+saveBtn.className = "save-btn"
+saveBtn.type = "button"
 
-    const deleteBtn = document.createElement("button")
-    deleteBtn.textContent = "Удалить товар"
-    deleteBtn.className = "delete-btn"
+const deleteBtn = document.createElement("button")
+deleteBtn.textContent = "Удалить товар"
+deleteBtn.className = "delete-btn"
+deleteBtn.type = "button"
 
     // ---------------------
     // SAVE
     // ---------------------
-    saveBtn.onclick = async () => {
-        const formData = new FormData()
+saveBtn.onclick = async (e) => {
 
-        formData.append("name", nameInput.value)
-        formData.append("description", desc.value)
-        formData.append("variants_unit", unitInput.value)
+    e.preventDefault()
 
-        const existing = []
-        photosContainer.querySelectorAll(".photo-wrapper").forEach(el => {
-            if (el._file) formData.append("newPhotos", el._file)
-            if (el.dataset.path) existing.push(el.dataset.path)
-        })
+    // ======================
+    // ПРОВЕРКИ
+    // ======================
 
-        formData.append("existingPhotos", JSON.stringify(existing))
+    if (!nameInput.value.trim()) {
+        alert("Введите название")
+        return
+    }
 
-        const vars = { Unit: unitInput.value, Value: [], Price: [] }
+    if (!desc.value.trim()) {
+        alert("Введите описание")
+        return
+    }
 
-        variantsContainer.querySelectorAll(".variant-row").forEach(row => {
-            const v = row.querySelector(".v-val").value.trim()
-            const p = row.querySelector(".v-price").value.trim()
-            if (v && p) {
-                vars.Value.push(v)
-                vars.Price.push(p)
-            }
-        })
+    if (!unitInput.value.trim()) {
+        alert("Введите единицу измерения")
+        return
+    }
 
-        formData.append("variants", JSON.stringify(vars))
+    // фото
+    const photos =
+        photosContainer.querySelectorAll(".photo-wrapper")
 
-        const attrs = []
-        attrContainer.querySelectorAll(".attr-row").forEach(row => {
-            const k = row.querySelector(".a-key").value.trim()
-            const v = row.querySelector(".a-val").value.trim()
-            if (k) attrs.push({ key: k, value: v })
-        })
+    if (photos.length === 0) {
+        alert("Добавьте фото")
+        return
+    }
 
-        formData.append("characteristics", JSON.stringify(attrs))
+    // варианты
+    const variantRows =
+        variantsContainer.querySelectorAll(".variant-row")
 
-        const selected = []
-        catContainer.querySelectorAll(".cat-checkbox:checked").forEach(cb => {
-            selected.push(cb.value)
-        })
+    if (variantRows.length === 0) {
+        alert("Добавьте вариант")
+        return
+    }
 
-        formData.append("subcategories", JSON.stringify(selected))
+    let hasVariant = false
 
-        if (!isCreate) formData.append("id", product.id)
+    for (const row of variantRows) {
 
-        const url = isCreate ? "/admin/create_product" : "/admin/update_product"
+        const v =
+            row.querySelector(".v-val").value.trim()
 
-        const res = await fetch(url, { method: "POST", body: formData })
+        const p =
+            row.querySelector(".v-price").value.trim()
 
-        if (res.ok) {
-            alert(isCreate ? "Создано!" : "Сохранено!")
-            location.reload()
+        // одно поле заполнено — второе обязательно
+        if ((v && !p) || (!v && p)) {
+            alert("Заполните вариант полностью")
+            return
+        }
+
+        if (v && p) {
+            hasVariant = true
         }
     }
+
+    if (!hasVariant) {
+        alert("Добавьте хотя бы один вариант")
+        return
+    }
+
+    // подкатегории
+    const checked =
+        catContainer.querySelectorAll(".cat-checkbox:checked")
+
+    if (checked.length === 0) {
+        alert("Выберите подкатегорию")
+        return
+    }
+
+    // ======================
+    // FORM DATA
+    // ======================
+
+    const formData = new FormData()
+
+    formData.append("name", nameInput.value)
+    formData.append("description", desc.value)
+    formData.append("variants_unit", unitInput.value)
+
+    const existing = []
+
+    photosContainer.querySelectorAll(".photo-wrapper").forEach(el => {
+
+        if (el._file) {
+            formData.append("newPhotos", el._file)
+        }
+
+        if (el.dataset.path) {
+            existing.push(el.dataset.path)
+        }
+    })
+
+    formData.append(
+        "existingPhotos",
+        JSON.stringify(existing)
+    )
+
+    // структура ОСТАЛАСЬ прежней
+    const vars = {
+        Unit: unitInput.value,
+        Value: [],
+        Price: []
+    }
+
+    variantsContainer.querySelectorAll(".variant-row").forEach(row => {
+
+        const v =
+            row.querySelector(".v-val").value.trim()
+
+        const p =
+            row.querySelector(".v-price").value.trim()
+
+        if (v && p) {
+            vars.Value.push(v)
+            vars.Price.push(p)
+        }
+    })
+
+    formData.append(
+        "variants",
+        JSON.stringify(vars)
+    )
+
+    const attrs = []
+
+    attrContainer.querySelectorAll(".attr-row").forEach(row => {
+
+        const k =
+            row.querySelector(".a-key").value.trim()
+
+        const v =
+            row.querySelector(".a-val").value.trim()
+
+        if (k) {
+            attrs.push({
+                key: k,
+                value: v
+            })
+        }
+    })
+
+    formData.append(
+        "characteristics",
+        JSON.stringify(attrs)
+    )
+
+    const selected = []
+
+    checked.forEach(cb => {
+        selected.push(cb.value)
+    })
+
+    formData.append(
+        "subcategories",
+        JSON.stringify(selected)
+    )
+
+    if (!isCreate) {
+        formData.append("id", product.id)
+    }
+
+    const url =
+        isCreate
+            ? "/admin/create_product"
+            : "/admin/update_product"
+
+    const res = await fetch(url, {
+        method: "POST",
+        body: formData
+    })
+
+    if (res.ok) {
+        alert(isCreate ? "Создано!" : "Сохранено!")
+        location.reload()
+    } else {
+        alert("Ошибка сохранения")
+    }
+}
 
     // ---------------------
     // DELETE

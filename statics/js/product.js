@@ -88,18 +88,25 @@ function renderThumbnails(photos) {
 }
 
 function renderCharacteristics(data) {
-    const el = document.getElementById("characteristics");
-    if (!data?.length) return el.innerHTML = "";
+    const el = document.getElementById("characteristics")
+
+    if (!data?.length) {
+        el.innerHTML = ""
+        return
+    }
 
     el.innerHTML = `
-        <table>
+        <table class="custom-table">
             <tbody>
                 ${data.map(i => `
-                    <tr><td>${i.key}</td><td>${i.value}</td></tr>
+                    <tr>
+                        <td>${i.key}</td>
+                        <td>${i.value}</td>
+                    </tr>
                 `).join("")}
             </tbody>
         </table>
-    `;
+    `
 }
 
 function renderVariants(v) {
