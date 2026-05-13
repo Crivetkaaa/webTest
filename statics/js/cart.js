@@ -40,12 +40,18 @@ export function initCart() {
         if (e.target === modal) modal.style.display = "none";
     });
 
-    // ADD TO CART
+       // ADD TO CART (Обновленный и безопасный)
     document.addEventListener("click", (e) => {
         if (e.target.id !== "submit") return;
 
         const select = document.getElementById("volume-select");
         if (!select) return;
+
+        // Проверяем, есть ли вообще доступные варианты для выбора
+        if (select.options.length === 0 || select.selectedIndex === -1) {
+            alert("Товар временно недоступен для заказа");
+            return;
+        }
 
         const opt = select.options[select.selectedIndex];
 
@@ -71,6 +77,7 @@ export function initCart() {
         saveCart(cart);
         updateCartUI();
     });
+
 
     // ORDER
     document.addEventListener("submit", async (e) => {
