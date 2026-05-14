@@ -114,40 +114,31 @@ function renderVariants(v) {
     if (!select || !v) return;
 
     const values = v.Value || [];
+    // Проверяем, есть ли юнит, если нет — строка пустая
+    const unitText = v.Unit && v.Unit.trim() !== "" ? ` ${v.Unit}` : "";
 
-    // Генерируем опции для селектора (всегда, даже если вариант 1)
     select.innerHTML = values.map((val, i) => `
         <option value="${val}" data-price="${v.Price[i]}" data-id="${v.Id[i]}">
-            ${val} ${v.Unit} — ${v.Price[i]} ₽
+            ${val}${unitText} — ${v.Price[i]} ₽
         </option>
     `).join("");
 
-    // Удаляем старый инфо-блок единственного варианта, если он был создан ранее
     const oldInfo = document.getElementById("single-variant-info");
     if (oldInfo) oldInfo.remove();
 
     if (values.length === 1) {
-        // Скрываем выпадающий список
         select.style.display = "none";
 
-        // Создаем красивую текстовую плашку вместо селектора
         const infoBlock = document.createElement("div");
         infoBlock.id = "single-variant-info";
-        infoBlock.className = "single-variant-info"; // класс для CSS стилей
-        infoBlock.style.fontWeight = "600";
-        infoBlock.style.marginBottom = "12px";
-        infoBlock.style.fontSize = "16px";
-        infoBlock.style.color = "#1e293b";
-        
-        // Выводим текст: например, "50 ml — 1500 ₽"
-        infoBlock.textContent = `${values[0]} ${v.Unit} — ${v.Price[0]} ₽`;
         infoBlock.className = "text-base font-semibold text-gray-800 mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100 inline-block";
+        
+        // Корректный вывод для единственного варианта без юнита
+        infoBlock.textContent = `${v.Price} ₽`;
 
-
-        // Вставляем инфо-блок перед кнопкой отправки
         select.parentNode.insertBefore(infoBlock, select.nextSibling);
     } else {
-        // Если вариантов больше одного — показываем селектор обратно
         select.style.display = "block";
     }
 }
+

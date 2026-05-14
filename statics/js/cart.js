@@ -134,7 +134,8 @@ function renderCart() {
     container.innerHTML = cart.map((i, idx) => {
 
         sum += i.price * i.quantity;
-
+// Внутри метода map() функции renderCart:
+    const unitText = i.unit && i.unit.trim() !== "" ? ` ${i.unit}` : ""; // Добавьте i.unit в ваш объект сохранения, если нужно, или проверяйте i.volume
         return `
             <div class="cart-item">
 
@@ -144,7 +145,7 @@ function renderCart() {
                     </a>
 
                     <div class="cart-item-sub">
-                        ${i.volume} — ${i.price} ₽
+                        ${i.volume}${unitText} — ${i.price} ₽
                     </div>
                 </div>
 

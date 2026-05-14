@@ -893,7 +893,6 @@ func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
 
 	return nil
 }
-
 func (db *DB) CreateProduct(data struct_folder.UpdateProductData) (int64, error) {
 	tx, err := db.Db.Begin()
 	if err != nil {
@@ -906,12 +905,16 @@ func (db *DB) CreateProduct(data struct_folder.UpdateProductData) (int64, error)
 	}
 
 	// ======================
-	// 1. SLUG
+	// 1. СГЕНЕРИРОВАТЬ УНИКАЛЬНЫЙ SLUG (name-1, name-2...)
 	// ======================
-	slug := generateSlug(data.Name)
+	baseSlug := generateSlug(data.Name)
+	slug, err := db.getUniqueSlug(tx, baseSlug)
+	if err != nil {
+		return fail(err)
+	}
 
 	// ======================
-	// 2. PRODUCT
+	// 2. PRODUCT (Вставка с гарантированно уникальным слагом)
 	// ======================
 	res, err := tx.Exec(`
 		INSERT INTO products (name, description, slug)
@@ -979,6 +982,9 @@ func (db *DB) CreateProduct(data struct_folder.UpdateProductData) (int64, error)
 	// 5. ПОДКАТЕГОРИИ
 	// ======================
 	for _, sub := range data.Subcategories {
+		if sub == "" {
+			continue
+		}
 		_, err := tx.Exec(`
 			INSERT INTO product_subcategories (product_id, subcategory_slug)
 			VALUES (?, ?)`,
@@ -1009,6 +1015,30 @@ func (db *DB) CreateProduct(data struct_folder.UpdateProductData) (int64, error)
 	}
 
 	return productID, nil
+}
+
+// getUniqueSlug проверяет существование слага в БД и инкрементирует суффикс до тех пор, пока не найдет свободный.
+func (db *DB) getUniqueSlug(tx *sql.Tx, baseSlug string) (string, error) {
+	currentSlug := baseSlug
+	counter := 1
+
+	for {
+		var exists int
+		// Выполняем проверку строго внутри текущей транзакции
+		err := tx.QueryRow(`SELECT COUNT(1) FROM products WHERE slug = ?`, currentSlug).Scan(&exists)
+		if err != nil {
+			return "", err
+		}
+
+		// Если такого слага еще нет в базе — он подходит
+		if exists == 0 {
+			return currentSlug, nil
+		}
+
+		// Если слаг занят, добавляем/меняем числовой суффикс на следующий по порядку
+		currentSlug = fmt.Sprintf("%s-%d", baseSlug, counter)
+		counter++
+	}
 }
 
 func generateSlug(name string) string {

@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
     value TEXT NOT NULL,
-    unit TEXT DEFAULT 'ml',
+    unit TEXT,
     price INTEGER NOT NULL,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
@@ -85,7 +85,7 @@ CREATE TABLE order_items (
     variant_id INTEGER NOT NULL,        -- Оставляем ID для истории (БЕЗ FOREIGN KEY)
     product_name TEXT NOT NULL,         -- Сюда жестко запишется имя товара
     variant_value TEXT NOT NULL,        -- Сюда запишется объем/размер (например, "50")
-    variant_unit TEXT DEFAULT 'ml',     -- Единица измерения ("ml", "кг")
+    variant_unit TEXT,     -- Единица измерения ("ml", "кг")
     price_at_purchase INTEGER NOT NULL, -- Точная цена на момент покупки
     quantity INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE

@@ -42,17 +42,19 @@ export async function initCatalog() {
     const res = await fetch(`/api/mini_categories?category=${currentMainCategory}`);
     const categories = await res.json();
 
-    if (categories.length > 1) {
-        miniContainer.innerHTML = `
-            <div class="category">
-                <a href="/${currentMainCategory}" data-slug="">Все</a>
-                ${categories.map(item => `
-                    <a href="/${currentMainCategory}/${item.slug}" data-slug="${item.slug}">
-                        ${item.name}
-                    </a>
-                `).join("")}
-            </div>
-        `;
+    if (categories != null) {
+        if (categories.length > 1) {
+            miniContainer.innerHTML = `
+                <div class="category">
+                    <a href="/${currentMainCategory}" data-slug="">Все</a>
+                    ${categories.map(item => `
+                        <a href="/${currentMainCategory}/${item.slug}" data-slug="${item.slug}">
+                            ${item.name}
+                        </a>
+                    `).join("")}
+                </div>
+            `;
+        }
     }
 
     // -------------------------

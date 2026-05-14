@@ -373,11 +373,6 @@ saveBtn.onclick = async (e) => {
         return
     }
 
-    if (!unitInput.value.trim()) {
-        alert("Введите единицу измерения")
-        return
-    }
-
     // фото
     const photos =
         photosContainer.querySelectorAll(".photo-wrapper")

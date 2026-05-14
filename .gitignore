@@ -1,3 +1,4 @@
 test.*
 *.db
 seed.*
+img/product_img/*
