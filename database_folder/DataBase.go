@@ -819,7 +819,7 @@ func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
 	}
 
 	// ======================
-	// 5. ФОТО (без удаления с диска пока)
+	// 5. ФОТО (Сбор путей удаленных изображений)
 	// ======================
 	var toDelete []string
 
@@ -849,7 +849,7 @@ func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
 	}
 	rows.Close()
 
-	// пересоздаём таблицу
+	// Пересоздаём связи фотографий в БД
 	_, err = tx.Exec(`DELETE FROM product_photos WHERE product_id = ?`, data.ID)
 	if err != nil {
 		return fail(err)
@@ -885,14 +885,26 @@ func (db *DB) UpdateProduct(data struct_folder.UpdateProductData) error {
 	}
 
 	// ======================
-	// УДАЛЕНИЕ ФАЙЛОВ ПОСЛЕ КОММИТА
+	// УДАЛЕНИЕ СТАРЫХ ФАЙЛОВ С ДИСКА (ИСПРАВЛЕНО)
 	// ======================
 	for _, path := range toDelete {
-		os.Remove(path)
+		// Защита от сбоя: убираем веб-префикс "/", если он сохранялся во фронтенде,
+		// чтобы превратить путь в валидный локальный (например, из "/statics/..." в "statics/...")
+		localPath := strings.TrimPrefix(path, "/")
+
+		// Проверяем физическое существование файла перед удалением
+		if _, err := os.Stat(localPath); err == nil {
+			if err := os.Remove(localPath); err != nil {
+				log.Println("ОШИБКА УДАЛЕНИЯ ФАЙЛА С ДИСКА:", err, "ПО ПУТИ:", localPath)
+			}
+		} else if os.IsNotExist(err) {
+			log.Println("ФАЙЛ ДЛЯ УДАЛЕНИЯ НЕ НАЙДЕН НА ДИСКЕ:", localPath)
+		}
 	}
 
 	return nil
 }
+
 func (db *DB) CreateProduct(data struct_folder.UpdateProductData) (int64, error) {
 	tx, err := db.Db.Begin()
 	if err != nil {
