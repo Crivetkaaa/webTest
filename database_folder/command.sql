@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- 11. Состав заказа (НОВАЯ ТАБЛИЦА)
-CREATE TABLE order_items (
+CREATE TABLE IF NOT EXISTS order_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
     variant_id INTEGER NOT NULL,        -- Оставляем ID для истории (БЕЗ FOREIGN KEY)

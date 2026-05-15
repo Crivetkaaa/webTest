@@ -69,4 +69,20 @@ func UsersRouters(r *gin.RouterGroup, db *database_folder.DB) {
 		}
 		handlers.Catalogs(ctx, db)
 	})
+
+	r.GET("/download/privacy", func(ctx *gin.Context) {
+		filePath := "statics/docx/privacy.docx"
+
+		// Задаем заголовок, который заставит браузер именно СКАЧАТЬ файл, а не пытаться открыть как текст
+		ctx.Header("Content-Description", "File Transfer")
+		ctx.Header("Content-Disposition", "attachment; filename=privacy_policy.docx")
+		ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+		ctx.Header("Content-Transfer-Encoding", "binary")
+		ctx.Header("Expires", "0")
+		ctx.Header("Cache-Control", "must-revalidate")
+		ctx.Header("Pragma", "public")
+
+		// Отдаем файл в поток
+		ctx.File(filePath)
+	})
 }

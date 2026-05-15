@@ -27,7 +27,12 @@
 
             <label>Комментарий</label>
             <textarea name="comment" rows="3" placeholder="Ваш комментарий"></textarea>
-
+            <div class="privacy-agreement">
+                <input type="checkbox" id="privacy-checkbox" name="privacy" required>
+                <label for="privacy-checkbox">
+                    Я соглашаюсь на <a href="/download/privacy" target="_blank">обработку персональных данных</a>
+                </label>
+            </div>
             <button type="submit" class="checkout-button">Оформить заказ</button>
         </form>
     </div>

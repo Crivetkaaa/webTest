@@ -1,4 +1,6 @@
 test.*
 *.db
 seed.*
-img/product_img/*
+*/img/product_img/*
+.env
+*/docx/*

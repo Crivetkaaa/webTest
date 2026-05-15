@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"webTest/struct_folder"
+	"webTest/utilit"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -518,8 +519,12 @@ func (db *DB) InsertOrder(info struct_folder.OrderData) error {
 	err = tx.QueryRow(`SELECT id FROM users WHERE phone = ?`, info.Customer.Phone).Scan(&userID)
 
 	if err != nil {
+		userPhone, err := utilit.Encrypt(info.Customer.Phone)
+		if err != nil {
+			return fmt.Errorf("Ошибка шифрования: %v", err)
+		}
 		res, errExec := tx.Exec(`INSERT INTO users(phone, name) VALUES (?, ?)`,
-			info.Customer.Phone, info.Customer.Name)
+			userPhone, info.Customer.Name)
 		if errExec != nil {
 			err = errExec
 			return err
@@ -617,11 +622,22 @@ func (db *DB) getOrders(info *[]struct_folder.AdminInfo, limit, offset int, stat
 
 	for rows.Next() {
 		var item struct_folder.AdminInfo
+		var userPhone string
 		err := rows.Scan(
 			&item.OrdersInfo.Id, &item.OrdersInfo.Created_at,
-			&item.OrdersInfo.CustomerName, &item.OrdersInfo.Phone,
+			&item.OrdersInfo.CustomerName, &userPhone,
 			&item.OrdersInfo.TotalPrice, &item.OrdersInfo.Status,
 		)
+
+		encUserPhone, err := utilit.Decrypt(userPhone)
+		if err != nil {
+			// Логируем ошибку, но НЕ останавливаем работу сервера,
+			// отдавая в админку то, что есть в БД.
+			log.Println("Ошибка дешифрования для заказа №", item.OrdersInfo.Id, ":", err)
+			item.OrdersInfo.Phone = userPhone
+		} else {
+			item.OrdersInfo.Phone = encUserPhone
+		}
 		if err != nil {
 			return err
 		}

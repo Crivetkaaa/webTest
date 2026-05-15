@@ -11,6 +11,7 @@ import (
 	"webTest/routers"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func setupStatic(r *gin.Engine) {
@@ -57,6 +58,12 @@ func setupTemplates(r *gin.Engine) {
 }
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Предупреждение: .env файл не найден, берутся системные переменные")
+	}
+
 	db, err := database_folder.CreateDB()
 	if err != nil {
 		log.Fatalf("db init error: %v", err)

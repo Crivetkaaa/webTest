@@ -171,6 +171,7 @@ window.removeItem = function (i) {
     cart.splice(i, 1);
     saveCart(cart);
     updateCartUI();
+    renderCart();
 };
 
 window.changeQty = function (index, delta) {
