@@ -16,6 +16,16 @@ import (
 )
 
 func Download(c *gin.Context, filePath string, fileName string) {
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// Если файла нет, возвращаем JSON или страницу с ошибкой 404
+		c.HTML(http.StatusNotFound, "err.html", gin.H{"Title": "Файл потерялся"})
+		return
+	} else if err != nil {
+		c.HTML(http.StatusInternalServerError, "err.html", gin.H{"Title": "Файл повреждён"})
+		return
+	}
+
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Disposition", "attachment; filename="+fileName)
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
