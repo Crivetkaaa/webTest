@@ -146,4 +146,11 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 	adminPanel.POST("/update_category", func(ctx *gin.Context) {
 		handlers.UpdateCategory(ctx, db)
 	})
+	adminPanel.GET("/settings", func(ctx *gin.Context) {
+		handlers.AdminSettings(ctx)
+	})
+
+	adminPanel.POST("/settings/update-docs", func(ctx *gin.Context) {
+		handlers.AdminUpdateDocx(ctx)
+	})
 }

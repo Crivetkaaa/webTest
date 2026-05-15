@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func Download(c *gin.Context, filePath string, fileName string) {
+	c.Header("Content-Description", "File Transfer")
+	c.Header("Content-Disposition", "attachment; filename="+fileName)
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Expires", "0")
+	c.Header("Cache-Control", "must-revalidate")
+	c.Header("Pragma", "public")
+	c.File(filePath)
+}
 
 func Catalogs(c *gin.Context, db *database_folder.DB) {
 	bigNavbar, err := db.GetBigNavbar()
@@ -413,4 +425,48 @@ func UpdateCategory(c *gin.Context, db *database_folder.DB) {
 
 	c.JSON(200, gin.H{"message": "good"})
 
+}
+
+func AdminSettings(c *gin.Context) {
+	c.HTML(http.StatusOK, "adminSettings.html", nil)
+}
+
+func AdminUpdateDocx(c *gin.Context) {
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Не удалось прочитать форму: " + err.Error()})
+		return
+	}
+
+	targetFiles := map[string]string{
+		"offer":   "offer.docx",
+		"privacy": "privacy.docx",
+	}
+
+	uploadedCount := 0
+
+	for fieldName, targetName := range targetFiles {
+		files := form.File[fieldName]
+		if len(files) == 0 {
+			continue
+		}
+
+		file := files[0]
+
+		dst := filepath.Join("statics", "docx", targetName)
+
+		if err := c.SaveUploadedFile(file, dst); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при сохранении файла " + targetName})
+			return
+		}
+
+		uploadedCount++
+	}
+
+	if uploadedCount == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Не выбрано ни одного файла для обновления"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Документы успешно обновлены!"})
 }
