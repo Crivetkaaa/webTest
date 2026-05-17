@@ -2,11 +2,45 @@ package middleware
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
-var SessionID string
+type SessionStore struct {
+	mu       sync.RWMutex
+	sessions map[string]string
+}
+
+var Sessions SessionStore
+
+func InitMiddleware() {
+	Sessions = SessionStore{
+		sessions: make(map[string]string),
+	}
+}
+
+func AddSession(sessionID string, username string) {
+	Sessions.mu.Lock()
+	defer Sessions.mu.Unlock()
+
+	Sessions.sessions[sessionID] = username
+}
+
+func GetSession(sessionID string) (string, bool) {
+	Sessions.mu.RLock()
+	defer Sessions.mu.RUnlock()
+
+	username, exists := Sessions.sessions[sessionID]
+	return username, exists
+}
+
+func DeleteSession(sessionID string) {
+	Sessions.mu.Lock()
+	defer Sessions.mu.Unlock()
+
+	delete(Sessions.sessions, sessionID)
+}
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -17,7 +51,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if SessionID != sessionID {
+		username, exists := GetSession(sessionID)
+		if !exists {
 			ctx.HTML(http.StatusUnauthorized, "admin_login.html", nil)
 			ctx.Abort()
 			return
@@ -29,9 +64,12 @@ func AuthMiddleware() gin.HandlerFunc {
 			3600,
 			"/admin",
 			"",
-			false,
+			false, // secure=true в production с HTTPS
 			true,
 		)
+
+		ctx.Set("adminLogin", username)
+
 		ctx.Next()
 	}
 }

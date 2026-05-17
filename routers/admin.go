@@ -3,9 +3,9 @@ package routers
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"strconv"
+
 	"webTest/database_folder"
 	"webTest/handlers"
 	"webTest/middleware"
@@ -15,10 +15,12 @@ import (
 
 func generateSessionID() (string, error) {
 	b := make([]byte, 32)
+
 	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
 	}
+
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
@@ -27,37 +29,71 @@ func adminLogin(ctx *gin.Context, db *database_folder.DB) {
 		UserName     string `json:"username"`
 		UserPassword string `json:"password"`
 	}
+
 	var data Admin
 
 	if err := ctx.ShouldBindJSON(&data); err != nil {
-		ctx.JSON(400, gin.H{"error": "Invalid data"})
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid data",
+		})
 		return
 	}
 
-	fmt.Println(data)
-
-	if db.Login(data.UserName, data.UserPassword) {
-		sessionID, err := generateSessionID()
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Server Error"})
-			return
-		}
-
-		ctx.SetCookie(
-			"sessionID",
-			sessionID,
-			3600,
-			"/admin",
-			"",
-			false,
-			true,
-		)
-
-		ctx.JSON(http.StatusOK, gin.H{"success": true, "redirect": "/admin/dashboard", "sessionID": sessionID})
-		middleware.SessionID = sessionID
-	} else {
-		ctx.JSON(http.StatusForbidden, gin.H{"success": false, "message": "Wrong credentials"})
+	if !db.Login(data.UserName, data.UserPassword) {
+		ctx.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": "Wrong credentials",
+		})
+		return
 	}
+
+	sessionID, err := generateSessionID()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Server error",
+		})
+		return
+	}
+
+	middleware.AddSession(sessionID, data.UserName)
+
+	ctx.SetCookie(
+		"sessionID",
+		sessionID,
+		3600,
+		"/admin",
+		"",
+		false, // secure=true в production
+		true,
+	)
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"redirect": "/admin/dashboard",
+	})
+}
+
+func adminLogout(ctx *gin.Context) {
+	sessionID, err := ctx.Cookie("sessionID")
+
+	if err == nil && sessionID != "" {
+		middleware.DeleteSession(sessionID)
+	}
+
+	ctx.SetCookie(
+		"sessionID",
+		"",
+		-1,
+		"/admin",
+		"",
+		false,
+		true,
+	)
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
 }
 
 func dashboardInfo(ctx *gin.Context, db *database_folder.DB) {
@@ -67,7 +103,9 @@ func dashboardInfo(ctx *gin.Context, db *database_folder.DB) {
 
 	orders, err := db.GetOrdersAdmin(limit, offset, status)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 
@@ -79,23 +117,27 @@ func updateStatus(ctx *gin.Context, db *database_folder.DB) {
 		Id        int    `json:"id"`
 		NewStatus string `json:"status"`
 	}
+
 	var status NewStatus
+
 	err := ctx.ShouldBindJSON(&status)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, nil)
 		return
 	}
+
 	err = db.UpdateStatus(status.Id, status.NewStatus)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, nil)
 		return
 	}
+
 	ctx.JSON(http.StatusOK, nil)
 }
 
 func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 	admin.GET("/", func(ctx *gin.Context) {
-		ctx.HTML(200, "admin_login.html", nil)
+		ctx.HTML(http.StatusOK, "admin_login.html", nil)
 	})
 
 	admin.POST("/auth", func(ctx *gin.Context) {
@@ -105,8 +147,12 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 	adminPanel := admin.Group("/")
 	adminPanel.Use(middleware.AuthMiddleware())
 
+	adminPanel.POST("/logout", func(ctx *gin.Context) {
+		adminLogout(ctx)
+	})
+
 	adminPanel.GET("/dashboard", func(ctx *gin.Context) {
-		ctx.HTML(200, "admin.html", nil)
+		ctx.HTML(http.StatusOK, "admin.html", nil)
 	})
 
 	adminPanel.GET("/products", func(ctx *gin.Context) {
@@ -119,7 +165,6 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 
 	adminPanel.POST("/orders/status", func(ctx *gin.Context) {
 		updateStatus(ctx, db)
-
 	})
 
 	adminPanel.POST("/update_product", func(ctx *gin.Context) {
@@ -131,7 +176,6 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 	})
 
 	adminPanel.DELETE("/delete_product/:id", func(ctx *gin.Context) {
-		fmt.Println("del 1")
 		handlers.DeleteProduct(ctx, db)
 	})
 
@@ -146,11 +190,16 @@ func AdminRouters(admin *gin.RouterGroup, db *database_folder.DB) {
 	adminPanel.POST("/update_category", func(ctx *gin.Context) {
 		handlers.UpdateCategory(ctx, db)
 	})
+
 	adminPanel.GET("/settings", func(ctx *gin.Context) {
 		handlers.AdminSettings(ctx)
 	})
 
 	adminPanel.POST("/settings/update-docs", func(ctx *gin.Context) {
 		handlers.AdminUpdateDocx(ctx)
+	})
+
+	adminPanel.POST("/settings/change-password", func(ctx *gin.Context) {
+		handlers.ChangePassword(ctx, db)
 	})
 }

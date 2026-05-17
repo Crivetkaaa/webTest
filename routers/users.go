@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"fmt"
 	"net/http"
 	"slices"
 	"webTest/database_folder"
@@ -17,7 +16,6 @@ func UsersRouters(r *gin.RouterGroup, db *database_folder.DB) {
 			ctx.HTML(http.StatusNotFound, "err.html", gin.H{"Title": "Ошибка сервера"})
 			return
 		}
-		fmt.Println(d)
 		ctx.Redirect(http.StatusMovedPermanently, "/"+d)
 	})
 
