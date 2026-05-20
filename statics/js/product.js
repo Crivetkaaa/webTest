@@ -1,6 +1,6 @@
+let currentPhotoIndex = 0;
 
 import { getLastListUrl } from "./router.js";
-import { restoreRoute } from "./router.js";
 import { loadProducts } from "./catalog.js";
 
 let currentPhoto = null;
@@ -25,31 +25,32 @@ export function openProductModal(product, prev = "/") {
 
     const photos = product.Photo || [];
 
+    currentPhotoIndex = 0;
+
     currentPhoto = photos[0] || "";
     setMainImage(currentPhoto);
 
     document.getElementById("modal-title").textContent = product.Name || "";
     document.getElementById("description").textContent = product.Description || "";
+
     renderThumbnails(photos);
     renderCharacteristics(product.Characteristic);
     renderVariants(product.Variants);
+    setupPhotoNavigation(photos);
 
     modal.style.display = "block";
 }
-
 
 function closeProductModal() {
     document.getElementById("product-modal").style.display = "none";
 
     const lastUrl = getLastListUrl();
 
-    // прямой заход на товар
     if (lastUrl === "/") {
         window.location.href = "/";
         return;
     }
 
-    // обычный SPA возврат
     history.pushState({}, "", lastUrl);
 
     const path = lastUrl.split("/");
@@ -79,19 +80,29 @@ function renderThumbnails(photos) {
         const img = e.target.closest(".modal-thumbnail");
         if (!img) return;
 
-        container.querySelectorAll("img").forEach(i => i.classList.remove("active"));
-        img.classList.add("active");
+        const imgs = Array.from(container.querySelectorAll(".modal-thumbnail"));
 
+        currentPhotoIndex = imgs.indexOf(img);
+
+        syncThumbnailActive();
         setMainImage(img.dataset.src);
     };
 }
 
+function syncThumbnailActive() {
+    const thumbs = document.querySelectorAll(".modal-thumbnail");
+
+    thumbs.forEach((t, i) => {
+        t.classList.toggle("active", i === currentPhotoIndex);
+    });
+}
+
 function renderCharacteristics(data) {
-    const el = document.getElementById("characteristics")
+    const el = document.getElementById("characteristics");
 
     if (!data?.length) {
-        el.innerHTML = ""
-        return
+        el.innerHTML = "";
+        return;
     }
 
     el.innerHTML = `
@@ -105,7 +116,7 @@ function renderCharacteristics(data) {
                 `).join("")}
             </tbody>
         </table>
-    `
+    `;
 }
 
 function renderVariants(v) {
@@ -113,7 +124,6 @@ function renderVariants(v) {
     if (!select || !v) return;
 
     const values = v.Value || [];
-    // Проверяем, есть ли юнит, если нет — строка пустая
     const unitText = v.Unit && v.Unit.trim() !== "" ? ` ${v.Unit}` : "";
 
     select.innerHTML = values.map((val, i) => `
@@ -122,22 +132,88 @@ function renderVariants(v) {
         </option>
     `).join("");
 
-    const oldInfo = document.getElementById("single-variant-info");
-    if (oldInfo) oldInfo.remove();
-
     if (values.length === 1) {
         select.style.display = "none";
-
-        const infoBlock = document.createElement("div");
-        infoBlock.id = "single-variant-info";
-        infoBlock.className = "text-base font-semibold text-gray-800 mb-3 bg-gray-50 p-2 rounded-lg border border-gray-100 inline-block";
-        
-        // Корректный вывод для единственного варианта без юнита
-        infoBlock.textContent = `${v.Price} ₽`;
-
-        select.parentNode.insertBefore(infoBlock, select.nextSibling);
+        updateBuyButton(v.Price[0]);
     } else {
         select.style.display = "block";
+
+        const setPrice = () => {
+            const selected = select.options[select.selectedIndex];
+            updateBuyButton(selected.dataset.price);
+        };
+
+        setPrice();
+        select.onchange = setPrice;
     }
 }
 
+function updateBuyButton(price) {
+    const btn = document.getElementById("submit");
+    if (!btn) return;
+
+    btn.textContent = `Добавить в корзину — ${price} ₽`;
+}
+
+function setupPhotoNavigation(photos) {
+    const modal = document.querySelector(".modal-main-container");
+
+    if (!modal || !photos?.length) return;
+
+    const update = () => {
+        const src = photos[currentPhotoIndex];
+        setMainImage(src);
+        syncThumbnailActive();
+    };
+
+    // ===== КЛИК ПО ЛЕВОЙ / ПРАВОЙ ЧАСТИ =====
+    modal.onclick = (e) => {
+        const rect = modal.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+
+        if (x < rect.width / 2) {
+            currentPhotoIndex = Math.max(0, currentPhotoIndex - 1);
+        } else {
+            currentPhotoIndex = Math.min(photos.length - 1, currentPhotoIndex + 1);
+        }
+
+        update();
+    };
+
+    // ===== КЛАВИАТУРА =====
+    const keyHandler = (e) => {
+        if (e.key === "ArrowLeft") {
+            currentPhotoIndex = Math.max(0, currentPhotoIndex - 1);
+            update();
+        }
+
+        if (e.key === "ArrowRight") {
+            currentPhotoIndex = Math.min(photos.length - 1, currentPhotoIndex + 1);
+            update();
+        }
+    };
+
+    document.addEventListener("keydown", keyHandler);
+
+    // ===== СВАЙП (МОБИЛКА) =====
+    let startX = 0;
+
+    modal.addEventListener("touchstart", (e) => {
+        startX = e.touches[0].clientX;
+    });
+
+    modal.addEventListener("touchend", (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+
+        if (Math.abs(diff) < 40) return;
+
+        if (diff > 0) {
+            currentPhotoIndex = Math.min(photos.length - 1, currentPhotoIndex + 1);
+        } else {
+            currentPhotoIndex = Math.max(0, currentPhotoIndex - 1);
+        }
+
+        update();
+    });
+}

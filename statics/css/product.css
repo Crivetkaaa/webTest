@@ -1,15 +1,11 @@
-/* .modal-left,
-.modal-main-container {
-    min-width: 0;
-} */
 /* =========================
    МОДАЛКА ТОВАРА
    ========================= */
 
-
 .description {
     white-space: pre-wrap;
 }
+
 .product-modal {
     display: none;
     position: fixed;
@@ -47,26 +43,24 @@
     display: flex;
     max-width: fit-content;
     margin: 0 auto;
-    /* margin-right: 400px; */
     align-items: center;
     gap: 120px;
 }
 
 /* =========================
-   LEFT (галерея)
+   LEFT
    ========================= */
 
 .modal-left {
     display: flex;
     flex-direction: row-reverse;
     flex: 1 1 auto;
-    min-width: 0;   /* критично */
+    min-width: 0;
 }
 
 /* миниатюры */
-/* ЛЕВАЯ КОЛОНКА — миниатюры */
 .modal-thumbnails {
-    flex: 0 0 90px ;
+    flex: 0 0 90px;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -92,39 +86,41 @@
     border-radius: 10px;
 }
 
-/* главное фото */
+/* =========================
+   MAIN IMAGE
+   ========================= */
+
 .modal-main-container {
+    position: relative;
     width: 100%;
-    height: 80vh;        /* фиксируем высоту области */
-    max-width: 650px;    /* чтобы не растягивалось слишком */
+    height: 80vh;
+    max-width: 650px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
 }
 
-
 .modal-main-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;   /* КЛЮЧЕВО */
+    object-fit: cover;
     display: block;
 }
 
 /* =========================
-   RIGHT (информация)
+   RIGHT
    ========================= */
 
 .modal-right {
-    flex: 0 0 380px;   /* ВАЖНО: фиксируем колонку */
+    flex: 0 0 380px;
     max-width: 380px;
     min-width: 320px;
-
     position: sticky;
     top: 20px;
 }
 
-/* заголовок */
+/* заголовок (ВОССТАНОВЛЕНО) */
 #modal-title {
     font-size: 32px;
     font-weight: 600;
@@ -133,10 +129,10 @@
     letter-spacing: 1px;
 }
 
-/* описание */
+/* описание (ВОССТАНОВЛЕНО) */
 .description-text {
     white-space: pre-wrap;
-    font-size: 15px;
+    font-size: 25px;
     color: #555;
     margin: 20px 0;
     padding-top: 15px;
@@ -165,14 +161,7 @@
     border: none;
 }
 
-.product_button:hover {
-    background: #333;
-}
-
-/* =========================
-   ТАБЛИЦА (ВАЖНО)
-   ========================= */
-
+/* таблица */
 .custom-table {
     width: 100%;
     border-collapse: collapse;
@@ -189,136 +178,81 @@
 
 .custom-table td {
     font-size: 14px;
-    padding: 0;
-}
-
-/* левый столбец */
-.custom-table td:first-child {
-    flex: 1;
-    text-align: left;
-    font-weight: 600;
-    color: #888;
-}
-
-/* правый столбец */
-.custom-table td:last-child {
-    flex: 1;
-    text-align: right;
-    color: #222;
-    word-break: break-word;
 }
 
 /* =========================
    MOBILE
    ========================= */
-/* =========================
-   MOBILE
-   ========================= */
+
 @media (max-width: 900px) {
 
-    .product-modal-content {
-        padding: 60px 15px 20px; /* Уменьшаем отступы сверху */
-    }
-
-    /* РАСПОЛОЖЕНИЕ: Ставим всё в одну колонку на всю ширину */
     .modal-layout {
         flex-direction: column;
-        gap: 20px; /* Уменьшаем гигантский gap */
+        gap: 20px;
         width: 100%;
-        max-width: 100%;
         margin: 0;
-        align-items: stretch; /* Растягиваем контент */
+        align-items: stretch;
     }
 
-    /* ГАЛЕРЕЯ: Главное фото сверху, миниатюры под ним */
     .modal-left {
+        flex-direction: column;
         width: 100%;
-        flex-direction: column; /* Миниатюры теперь ПОД фото */
-        align-items: center;
-        gap: 15px;
     }
 
-    /* Главное фото: больше не ограничиваем fit-content */
     .modal-main-container {
         width: 100%;
         max-width: 100%;
-        justify-content: center;
-        gap: 0; /* Убираем тот безумный gap в 100000px */
     }
 
     .modal-main-image {
         width: 100%;
-        max-height: 50vh; /* Уменьшаем высоту, чтобы инфо влезло на экран */
+        max-height: 50vh;
         object-fit: contain;
     }
 
-    /* Миниатюры: Горизонтальный скролл под фото */
     .modal-thumbnails {
-        order: 2; /* Ставим после главного фото */
         flex-direction: row;
-        gap: 10px;
         overflow-x: auto;
+        gap: 10px;
         width: 100%;
-        padding: 5px 0;
-        justify-content: flex-start; /* Скролл удобнее от левого края */
-        -webkit-overflow-scrolling: touch;
     }
 
     .modal-thumbnail {
         width: 60px;
         height: 75px;
-        flex: 0 0 auto; /* Не даем картинкам сжиматься */
+        flex: 0 0 auto;
     }
 
-    /* ИНФОРМАЦИЯ: Убираем фиксированную ширину */
     .modal-right {
-        position: static; /* Убираем sticky на мобилках */
+        position: static;
         width: 100%;
         max-width: 100%;
-        min-width: 0;
-        flex: none;
     }
 
     #modal-title {
         font-size: 24px;
-        margin-top: 5px;
-        text-align: left; /* Текст слева привычнее */
     }
 
-    /* Описание и Таблица */
     .description-text {
-    white-space: pre-wrap;
-
-        font-size: 14px;
+        font-size: 18px;
         margin: 15px 0;
     }
 
-    .custom-table tr {
-        gap: 10px; /* Уменьшаем зазор в строках таблицы */
-    }
-
-    /* Кнопки и селекты делаем крупнее (под палец) */
-    .volume-select {
-        padding: 12px;
-        font-size: 16px; /* 16px предотвращает авто-зум в iOS */
-    }
-
+    .volume-select,
     .product_button {
-        padding: 18px;
         font-size: 16px;
     }
 
-    /* КРЕСТИК: Удобнее для нажатия */
     .product-close {
         top: 10px;
         right: 15px;
         font-size: 38px;
-        background: rgba(255,255,255,0.8);
-        border-radius: 50%;
         width: 44px;
         height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: rgba(255,255,255,0.8);
+        border-radius: 50%;
     }
 }

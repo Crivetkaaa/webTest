@@ -10,27 +10,28 @@
     {{ template "navbar" . }}
     {{ template "text" . }}
 
+    <!-- ГЛАВНЫЙ ЦЕНТРУЮЩИЙ КОНТЕЙНЕР -->
+    <div class="page">
 
+        <div class="products text" id="mini-navbar"></div>
 
-    <div class="products text" id="mini-navbar"></div>
+        <div id="search-controls" style="display: none;" class="products text"></div>
 
-    <div id="search-controls" style="display: none;" class="products text"></div>
+        <div class="products_card" id="products-container"></div>
 
-    <div class="products_card" id="products-container"></div>
+        <div class="button-container">
+            <div id="scroll-anchor"></div>
 
-    <div class="button-container">
-        <div id="scroll-anchor"></div>
-        <button id="load-more" data-href="/api/get_more">
-            Показать больше
-        </button>
+            <button id="load-more" data-href="/api/get_more">
+                Показать больше
+            </button>
+        </div>
+
     </div>
 
     {{ template "product" }}
 
-<script>
-</script>
-
-<script type="module" src="/statics/js/main.js"></script>
+    <script type="module" src="/statics/js/main.js"></script>
 </body>
 
 </html>
