@@ -10,7 +10,8 @@ import (
 	"webTest/struct_folder"
 	"webTest/utilit"
 
-	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
+	_ "modernc.org/sqlite"
 )
 
 type DB struct {
@@ -327,7 +328,6 @@ func (db *DB) getVariants(productSlug string, pi *struct_folder.BonusInfoProduct
 		pi.Variants.Price = append(pi.Variants.Price, pr)
 		pi.Variants.Value = append(pi.Variants.Value, val)
 	}
-	fmt.Println(pi.Variants.Id)
 	return nil
 }
 
@@ -436,7 +436,6 @@ func (db *DB) GetBonusInfo(productSlug string) (struct_folder.BonusInfoProduct, 
 	}
 
 	err = db.getCharacteristic(productSlug, &pi)
-	fmt.Println("CHAR", err)
 
 	if err != nil {
 		return pi, err
@@ -579,18 +578,72 @@ func (db *DB) InsertOrder(info struct_folder.OrderData) error {
 	return err
 }
 
+// UpdateAdminPassword проверяет старый пароль и записывает новый для текущего пользователя
+func (db *DB) UpdateAdminPassword(userName string, currentPassword string, newPassword string) (string, bool) {
+	// 1. Получаем текущий хеш из базы
+	querySelect := `SELECT password FROM administrator WHERE login = ?`
+	var hashPassword string
+	err := db.Db.QueryRow(querySelect, userName).Scan(&hashPassword)
+	if err != nil {
+		return "Пользователь не найден", false
+	}
+
+	// 2. Проверяем, совпадает ли введенный старый пароль
+	err = bcrypt.CompareHashAndPassword([]byte(hashPassword), []byte(currentPassword))
+	if err != nil {
+		return "Неверный текущий пароль", false
+	}
+
+	// 3. Хешируем новый пароль
+	newHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return "Ошибка генерации хеша", false
+	}
+
+	// 4. Записываем новый хеш в базу данных
+	queryUpdate := `UPDATE administrator SET password = ? WHERE login = ?`
+	_, err = db.Db.Exec(queryUpdate, string(newHash), userName)
+	if err != nil {
+		return "Ошибка обновления в БД", false
+	}
+
+	return "", true
+}
+
 func (db *DB) Login(userName string, userPassword string) bool {
 	query := `SELECT password FROM administrator WHERE login = ?`
-	var password string
-	err := db.Db.QueryRow(query, userName).Scan(&password)
+	var hashPassword string
+
+	err := db.Db.QueryRow(query, userName).Scan(&hashPassword)
 	if err != nil {
-		return false
+		return false // Пользователь не найден или ошибка БД
 	}
-	// TODO hash
-	fmt.Println(password)
-	if password != userPassword {
-		return false
+
+	// Сравниваем введенный чистый пароль с хешем из базы данных
+	err = bcrypt.CompareHashAndPassword([]byte(hashPassword), []byte(userPassword))
+	if err != nil {
+		return false // Пароли не совпадают
 	}
+
+	return true
+}
+
+// Registration хеширует пароль и сохраняет его в базу данных
+func (db *DB) Registration(userName string, userPassword string) bool {
+	// Хешируем пароль с дефолтной стоимостью (DefaultCost = 10)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return false // Ошибка генерации хеша
+	}
+
+	query := `INSERT INTO administrator(login, password) VALUES(?, ?)`
+
+	// Передаем логин и сгенерированный хеш (приводим []byte к string)
+	_, err = db.Db.Exec(query, userName, string(hashedPassword))
+	if err != nil {
+		return false // Ошибка записи в БД (например, дубликат логина)
+	}
+
 	return true
 }
 
@@ -705,7 +758,6 @@ func (db *DB) getOrdersInfo(info *[]struct_folder.AdminInfo) error {
 }
 
 func (db *DB) UpdateStatus(orderID int, orderStatus string) error {
-	fmt.Println(orderStatus)
 	query := `UPDATE orders 
 set status = ?
 WHERE id = ?`

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"webTest/database_folder"
+	"webTest/middleware"
 	"webTest/struct_folder"
 
 	"github.com/gin-gonic/gin"
@@ -52,7 +53,6 @@ func Catalogs(c *gin.Context, db *database_folder.DB) {
 func GetMiniNavbar(c *gin.Context, db *database_folder.DB) {
 	cat := c.Query("category")
 	navbar, err := db.GetMiniNavbar(cat)
-	fmt.Println(navbar)
 	if err != nil {
 		c.JSON(http.StatusNotFound, nil)
 		return
@@ -83,12 +83,10 @@ func GetProducrs(c *gin.Context, db *database_folder.DB) {
 		c.JSON(http.StatusNotFound, nil)
 		return
 	}
-	fmt.Println(len(products))
 	c.JSON(http.StatusOK, products)
 }
 
 func DeleteProduct(c *gin.Context, db *database_folder.DB) {
-	fmt.Println("Del")
 	product_id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(400, gin.H{"error": "incorrect product id"})
@@ -109,7 +107,6 @@ func GetProductInfo(c *gin.Context, db *database_folder.DB) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "scsdf"})
 		return
 	}
-	fmt.Println(pi)
 	c.JSON(http.StatusOK, pi)
 
 }
@@ -147,8 +144,6 @@ func PostOrders(c *gin.Context, db *database_folder.DB) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	fmt.Println(order)
 
 	err := db.InsertOrder(order)
 	if err != nil {
@@ -479,4 +474,67 @@ func AdminUpdateDocx(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Документы успешно обновлены!"})
+}
+func ChangePassword(ctx *gin.Context, db *database_folder.DB) {
+	currentPassword := ctx.PostForm("current_password")
+	newPassword := ctx.PostForm("new_password")
+	confirmPassword := ctx.PostForm("confirm_password")
+
+	if currentPassword == "" || newPassword == "" || confirmPassword == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Все поля обязательны для заполнения",
+		})
+		return
+	}
+
+	if newPassword != confirmPassword {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "Новый пароль и подтверждение не совпадают",
+		})
+		return
+	}
+
+	var userName string
+
+	// Получаем логин из middleware context
+	if login, exists := ctx.Get("adminLogin"); exists {
+		userName = login.(string)
+	} else {
+		// fallback через sessionID
+		cookie, err := ctx.Cookie("sessionID")
+		if err != nil {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Сессия не найдена",
+			})
+			return
+		}
+
+		login, exists := middleware.GetSession(cookie)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Недействительная сессия",
+			})
+			return
+		}
+
+		userName = login
+	}
+
+	errMsg, success := db.UpdateAdminPassword(
+		userName,
+		currentPassword,
+		newPassword,
+	)
+
+	if !success {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": errMsg,
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Пароль успешно изменен",
+	})
 }
