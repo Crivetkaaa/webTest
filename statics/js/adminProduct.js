@@ -524,16 +524,43 @@ saveBtn.onclick = async (e) => {
             : "/admin/update_product"
 
     const res = await fetch(url, {
-        method: "POST",
-        body: formData
-    })
+    method: "POST",
+    body: formData
+})
 
-    if (res.ok) {
-        alert(isCreate ? "Создано!" : "Сохранено!")
-        location.reload()
-    } else {
-        alert("Ошибка сохранения")
+
+// ======================
+// ПРОВЕРКА РАЗМЕРА
+// ======================
+
+let totalSize = 0
+
+photosContainer.querySelectorAll(".photo-wrapper").forEach(el => {
+
+    if (el._file) {
+        totalSize += el._file.size
     }
+})
+
+const maxSize = 100 * 1024 * 1024
+
+if (totalSize > maxSize) {
+
+    const mb =
+        (totalSize / 1024 / 1024).toFixed(2)
+
+    alert(`Размер фото слишком большой: ${mb} MB`)
+    return
+}
+const text = await res.text()
+
+if (res.ok) {
+    alert(isCreate ? "Создано!" : "Сохранено!")
+    location.reload()
+} else {
+    console.error(text)
+    alert(text || "Ошибка сохранения")
+}
 }
 
     // ---------------------
