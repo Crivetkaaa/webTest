@@ -6,6 +6,10 @@
    МОДАЛКА ТОВАРА
    ========================= */
 
+
+.description {
+    white-space: pre-wrap;
+}
 .product-modal {
     display: none;
     position: fixed;
@@ -131,6 +135,7 @@
 
 /* описание */
 .description-text {
+    white-space: pre-wrap;
     font-size: 15px;
     color: #555;
     margin: 20px 0;
@@ -282,6 +287,8 @@
 
     /* Описание и Таблица */
     .description-text {
+    white-space: pre-wrap;
+
         font-size: 14px;
         margin: 15px 0;
     }

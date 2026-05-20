@@ -30,7 +30,6 @@ export function openProductModal(product, prev = "/") {
 
     document.getElementById("modal-title").textContent = product.Name || "";
     document.getElementById("description").textContent = product.Description || "";
-
     renderThumbnails(photos);
     renderCharacteristics(product.Characteristic);
     renderVariants(product.Variants);
