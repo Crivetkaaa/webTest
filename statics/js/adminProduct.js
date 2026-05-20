@@ -74,34 +74,39 @@ function addOption(cat) {
         })
     })
 }
-
 function drawProduct(products, append) {
     const productCards = document.getElementById("productCards")
+
     if (!append) {
         productCards.innerHTML = ""
     }
+
     products.forEach(p => {
         const productCard = document.createElement("div")
         productCard.dataset.id = p.ID
         productCard.dataset.slug = p.Url
+
         const image = document.createElement("img")
         image.src = `/${p.MainPhoto}`
+        image.className = "product-img"
+
         const name = document.createElement("div")
         name.textContent = p.Name
-        name.id = "productName"
+        name.className = "product-title"
+
         const price = document.createElement("div")
         price.textContent = p.Price + " P"
+        price.className = "product-price"
 
         productCard.appendChild(image)
         productCard.appendChild(name)
         productCard.appendChild(price)
-        productCard.className = "product"
+
+        productCard.className = "product-card"
 
         productCards.appendChild(productCard)
     })
-
 }
-
 async function init() {
     const categories = await getCategories()
     const products = await getProducts()
@@ -128,6 +133,7 @@ function title(text) {
     el.style.marginBottom = "8px"
     return el
 }
+
 function drawModal(product, allSubcategories, isCreate = false) {
     const modal = document.getElementById("modal")
     const content = modal.querySelector(".modal-content")
@@ -633,7 +639,7 @@ function addProduct() {
 }
 
 document.getElementById("productCards").addEventListener("click", (e) => {
-    const card = e.target.closest(".product")
+    const card = e.target.closest(".product-card")
     if (!card) return
     getProductsInfo(card)
     console.log("клик по товару:", card.dataset.id)
