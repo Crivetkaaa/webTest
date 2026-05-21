@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 	"webTest/database_folder"
 	"webTest/middleware"
 	"webTest/struct_folder"
+	"webTest/utilit"
 
 	"github.com/gin-gonic/gin"
 )
@@ -223,7 +223,7 @@ func UpdateProduct(c *gin.Context, db *database_folder.DB) {
 	}
 
 	// ======================
-	// 4. ФАЙЛЫ (временно)
+	// 4. ФАЙЛЫ
 	// ======================
 	var tempFiles []string
 
@@ -232,11 +232,14 @@ func UpdateProduct(c *gin.Context, db *database_folder.DB) {
 		files := form.File["newPhotos"]
 
 		for _, file := range files {
-			fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
-			dst := "statics/img/product_img/" + fileName
-
-			if err := c.SaveUploadedFile(file, dst); err != nil {
-				c.JSON(500, gin.H{"error": "failed to save file"})
+			// Конвертируем, чистим EXIF и сохраняем как WebP
+			dst, err := utilit.ProcessAndSaveAsWebP(file, "statics/img/product_img/")
+			if err != nil {
+				// Удаляем файлы, загруженные в рамках текущего запроса
+				for _, f := range tempFiles {
+					os.Remove(f)
+				}
+				c.JSON(500, gin.H{"error": "failed to process file"})
 				return
 			}
 
@@ -250,7 +253,7 @@ func UpdateProduct(c *gin.Context, db *database_folder.DB) {
 	// ======================
 	err = db.UpdateProduct(data)
 	if err != nil {
-		// 🔴 если БД упала — удаляем загруженные файлы
+		// 🔴 если БД упала — удаляем созданные WebP файлы
 		for _, f := range tempFiles {
 			os.Remove(f)
 		}
@@ -264,7 +267,6 @@ func UpdateProduct(c *gin.Context, db *database_folder.DB) {
 	// ======================
 	c.JSON(200, gin.H{"status": "success"})
 }
-
 func AddProduct(c *gin.Context, db *database_folder.DB) {
 	var data struct_folder.UpdateProductData
 
@@ -298,11 +300,14 @@ func AddProduct(c *gin.Context, db *database_folder.DB) {
 		files := form.File["newPhotos"]
 
 		for _, file := range files {
-			fileName := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
-			dst := "statics/img/product_img/" + fileName
-
-			if err := c.SaveUploadedFile(file, dst); err != nil {
-				c.JSON(500, gin.H{"error": "file upload error"})
+			// Конвертируем, чистим EXIF и сохраняем как WebP
+			dst, err := utilit.ProcessAndSaveAsWebP(file, "statics/img/product_img/")
+			if err != nil {
+				// В случае ошибки удаляем уже успешно созданные файлы для этого продукта
+				for _, f := range data.NewPhotoPaths {
+					os.Remove(f)
+				}
+				c.JSON(500, gin.H{"error": "file processing error"})
 				return
 			}
 
@@ -313,6 +318,10 @@ func AddProduct(c *gin.Context, db *database_folder.DB) {
 	// DB
 	id, err := db.CreateProduct(data)
 	if err != nil {
+		// Если БД упала — удаляем созданные WebP файлы
+		for _, f := range data.NewPhotoPaths {
+			os.Remove(f)
+		}
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
