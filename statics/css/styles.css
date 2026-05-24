@@ -199,7 +199,7 @@ body {
 }
 
 .product_price:hover {
-    background: #333;
+    background: #000;
     color:aliceblue;
 }
 

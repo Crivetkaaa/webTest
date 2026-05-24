@@ -64,7 +64,7 @@ func adminLogin(ctx *gin.Context, db *database_folder.DB) {
 		3600,
 		"/admin",
 		"",
-		false, // secure=true в production
+		true, // secure=true в production
 		true,
 	)
 
@@ -87,7 +87,7 @@ func adminLogout(ctx *gin.Context) {
 		-1,
 		"/admin",
 		"",
-		false,
+		true,
 		true,
 	)
 

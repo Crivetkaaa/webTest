@@ -64,7 +64,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			3600,
 			"/admin",
 			"",
-			false, // secure=true в production с HTTPS
+			true, // secure=true в production с HTTPS
 			true,
 		)
 
