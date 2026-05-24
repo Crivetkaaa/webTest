@@ -66,7 +66,7 @@ func GetProducrs(c *gin.Context, db *database_folder.DB) {
 	search := c.Query("search")
 
 	limitStr := c.DefaultQuery("limit", "20")  // Если пусто, будет 20
-	offsetStr := c.DefaultQuery("offset", "0") // Если пусто, будет 0
+	offsetStr := c.DefaultQuery("cursor", "0") // Если пусто, будет 0
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {

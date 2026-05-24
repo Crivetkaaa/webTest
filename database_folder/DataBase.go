@@ -203,12 +203,11 @@ func (db *DB) getSubcat(products *[]struct_folder.MiniProducts) error {
 	}
 	return nil
 }
-
 func (db *DB) GetProducts(
 	productType string,
 	productCategory string,
 	search string,
-	offset int,
+	cursor int,
 	limit int,
 ) ([]struct_folder.MiniProducts, error) {
 	query := `
@@ -233,10 +232,11 @@ func (db *DB) GetProducts(
     (c.slug = ? OR ? = "")
     AND (s.slug = ? OR ? = "")
     AND (? = "" OR p.name LIKE CONCAT('%', ?, '%'))
+    AND p.id > ? 
 
     GROUP BY p.id
-    ORDER BY p.id
-    LIMIT ? OFFSET ?
+    ORDER BY p.id ASC
+    LIMIT ?
     `
 
 	rows, err := db.Db.Query(
@@ -244,8 +244,8 @@ func (db *DB) GetProducts(
 		productType, productType,
 		productCategory, productCategory,
 		search, search,
-		limit,
-		offset,
+		cursor, // Передаем курсор (в самый первый раз прилетит 0)
+		limit,  // OFFSET убрали
 	)
 	if err != nil {
 		return nil, err
