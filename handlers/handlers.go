@@ -66,7 +66,7 @@ func GetProducrs(c *gin.Context, db *database_folder.DB) {
 	search := c.Query("search")
 
 	limitStr := c.DefaultQuery("limit", "20")  // Если пусто, будет 20
-	offsetStr := c.DefaultQuery("offset", "0") // Если пусто, будет 0
+	offsetStr := c.DefaultQuery("cursor", "0") // Если пусто, будет 0
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
@@ -140,8 +140,11 @@ func GetProductAPI(c *gin.Context, db *database_folder.DB) {
 func PostOrders(c *gin.Context, db *database_folder.DB) {
 	var order struct_folder.OrderData
 
+	// Метод авто-валидирует данные на основе тегов binding:"required"
 	if err := c.ShouldBindJSON(&order); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Заполните все обязательные поля: " + err.Error(),
+		})
 		return
 	}
 

@@ -1,3 +1,4 @@
+import {resetCatalog } from "./catalog.js";
 let currentPhotoIndex = 0;
 
 import { getLastListUrl } from "./router.js";
@@ -40,7 +41,6 @@ export function openProductModal(product, prev = "/") {
 
     modal.style.display = "block";
 }
-
 function closeProductModal() {
     document.getElementById("product-modal").style.display = "none";
 
@@ -57,9 +57,9 @@ function closeProductModal() {
     const type = path[1] || "parfume";
     const sub = path[2] || "";
 
+    resetCatalog();
     loadProducts(type, sub, false);
 }
-
 function setMainImage(src) {
     if (!src.startsWith("/")) src = "/" + src;
     document.getElementById("main-image").src = src;

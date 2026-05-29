@@ -7,7 +7,7 @@ import { setLastListUrl } from "./router.js";
 let searchQuery = "";
 let currentSubCategory = "";
 
-let currentOffset = 0;
+let lastProductId = 0;
 const limit = 20;
 
 let isLoading = false;
@@ -21,10 +21,10 @@ const currentMainCategory =
 // -------------------------
 export function setSearch(query) {
     const container = document.getElementById("products-container");
-if (container) container.innerHTML = "";
+    if (container) container.innerHTML = "";
     searchQuery = query.trim();
 
-    currentOffset = 0;
+    lastProductId = 0;
     allLoaded = false;
 
     currentSubCategory = window.location.pathname.split("/")[2] || "";
@@ -71,7 +71,7 @@ export async function initCatalog() {
         currentSubCategory = sub;
         searchQuery = "";
 
-        currentOffset = 0;
+        lastProductId = 0;
         allLoaded = false;
 
         history.pushState({}, "", sub
@@ -119,16 +119,16 @@ export async function loadProducts(type, subcategory, append = false) {
     const container = document.getElementById("products-container");
     const btn = document.getElementById("load-more");
     if (!container) {
-    isLoading = false;
-    return;
-}
+        isLoading = false;
+        return;
+    }
 
     try {
         const res = await fetch(
             `/api/get_products?type=${type}` +
             `&category=${subcategory}` +
             `&limit=${limit}` +
-            `&offset=${currentOffset}` +
+            `&cursor=${lastProductId}` +
             `&search=${encodeURIComponent(searchQuery)}`
         );
 
@@ -155,7 +155,7 @@ export async function loadProducts(type, subcategory, append = false) {
         // RENDER
         // -------------------------
         const html = data.map(p => `
-            <div class="product_card" data-slug="${p.Url}">
+            <div class="product_card" data-slug="${p.Url}" data-id="${p.ID}">
                 <a href="/product/${p.Url}">
                     <img src="/${p.MainPhoto}" class="product_image">
 
@@ -183,6 +183,8 @@ export async function loadProducts(type, subcategory, append = false) {
         // -------------------------
         // PAGINATION STATE
         // -------------------------
+        lastProductId = data[data.length - 1].ID;
+
         if (data.length < limit) {
             allLoaded = true;
             if (btn) btn.style.display = "none";
@@ -201,11 +203,14 @@ export async function loadProducts(type, subcategory, append = false) {
 export function loadNextPage() {
     if (isLoading || allLoaded) return;
 
-    currentOffset += limit;
-
     loadProducts(
         currentMainCategory,
         currentSubCategory,
         true
     );
+}
+
+export function resetCatalog() {
+    lastProductId = 0;
+    allLoaded = false;
 }

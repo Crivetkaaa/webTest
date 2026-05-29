@@ -48,16 +48,16 @@ type OrderItem struct {
 }
 
 type OrderData struct {
-	Customer  CustomerInfo `json:"customer"`
-	Items     []OrderItem  `json:"items"`
-	Total     string       `json:"total"`
-	CreatedAt string       `json:"createdAt"`
+	Customer  CustomerInfo `json:"customer" binding:"required"`
+	Items     []OrderItem  `json:"items" binding:"required"`
+	Total     string       `json:"total" binding:"required"`
+	CreatedAt string       `json:"createdAt" binding:"required"`
 }
 
 type CustomerInfo struct {
-	Name    string `json:"name"`    // соответствует name="name" в HTML-форме
-	Phone   string `json:"phone"`   // соответствует name="phone"
-	Comment string `json:"comment"` // соответствует name="comment"
+	Name    string `json:"name" binding:"required"`
+	Phone   string `json:"phone" binding:"required"`
+	Comment string `json:"comment"` // Может быть пустым, тег не нужен
 }
 
 type OrdersInfo struct {
