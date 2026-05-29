@@ -107,6 +107,31 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+    will-change: transform, opacity;
+    
+}
+
+/* Классы для эффекта вылета (ухода) картинки */
+.slide-left-out {
+    transform: translateX(-100%);
+    opacity: 0;
+}
+.slide-right-out {
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+/* Классы для моментального сброса позиции перед влётом нового фото */
+.slide-left-in-prepare {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: none !important; /* Отключаем плавность на мгновение */
+}
+.slide-right-in-prepare {
+    transform: translateX(-100%);
+    opacity: 0;
+    transition: none !important; /* Отключаем плавность на мгновение */
 }
 
 /* =========================
