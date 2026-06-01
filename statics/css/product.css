@@ -43,7 +43,7 @@
     display: flex;
     max-width: fit-content;
     margin: 0 auto;
-    align-items: center;
+    align-items: flex-start;
     gap: 120px;
 }
 
