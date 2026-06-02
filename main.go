@@ -7,14 +7,17 @@ import (
 	"html/template"
 	"log"
 	"math/big" // Добавили обратно для стандартного веб-сервера
+	"os"
 	"strconv"
 	"strings"
 
 	"webTest/database_folder"
 	"webTest/middleware"
 	"webTest/routers"
+	"webTest/utilit"
 
 	"github.com/gin-gonic/gin"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -23,11 +26,11 @@ func setupStatic(r *gin.Engine) {
 	r.Static("/statics", "./statics")
 }
 
-func setupRoutes(r *gin.Engine, db *database_folder.DB) {
+func setupRoutes(r *gin.Engine, db *database_folder.DB, bot *tgbotapi.BotAPI, adminID int) {
 	api := r.Group("/api")
 	admin := r.Group("/admin")
 	users := r.Group("/")
-	routers.APIRouters(api, db)
+	routers.APIRouters(api, db, bot, adminID)
 	routers.AdminRouters(admin, db)
 	routers.UsersRouters(users, db)
 }
@@ -82,6 +85,18 @@ func main() {
 		log.Println("Предупреждение: .env файл не найден, берутся системные переменные")
 	}
 
+	bot := utilit.Init()
+	adminIDStr := os.Getenv("adminID")
+
+	adminID, err := strconv.Atoi(adminIDStr)
+	if err != nil {
+		log.Fatalf("Admin id is empty: %v", err)
+	}
+
+	if err != nil {
+		log.Fatalf("TG bot not start: %v", err)
+	}
+
 	db, err := database_folder.CreateDB()
 	if err != nil {
 		log.Fatalf("db init error: %v", err)
@@ -112,7 +127,7 @@ func main() {
 
 	setupTemplates(r)
 	setupStatic(r)
-	setupRoutes(r, db)
+	setupRoutes(r, db, bot, adminID)
 
 	log.Println("Server started on :8080")
 	err = r.Run(":8080")

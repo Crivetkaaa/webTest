@@ -14,6 +14,7 @@ import (
 	"webTest/utilit"
 
 	"github.com/gin-gonic/gin"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 func Download(c *gin.Context, filePath string, fileName string) {
@@ -137,7 +138,8 @@ func GetProductAPI(c *gin.Context, db *database_folder.DB) {
 	c.JSON(200, product)
 }
 
-func PostOrders(c *gin.Context, db *database_folder.DB) {
+// ТУТ
+func PostOrders(c *gin.Context, db *database_folder.DB, bot *tgbotapi.BotAPI, adminID int) {
 	var order struct_folder.OrderData
 
 	// Метод авто-валидирует данные на основе тегов binding:"required"
@@ -157,9 +159,50 @@ func PostOrders(c *gin.Context, db *database_folder.DB) {
 		return
 	}
 
+	go func(o struct_folder.OrderData) {
+		var adminChatID int64 = int64(adminID) // ⚠️ ЗАМЕНИТЕ НА ВАШ CHAT ID (число)
+
+		// 1. Собираем список товаров в цикле
+		var itemsList string
+		for i, item := range o.Items {
+			itemsList += fmt.Sprintf(
+				"%d. %s (Вариант: %d)\n   Цена: %.2f руб. | Кол-во: %d шт.\n",
+				i+1, item.Name, item.VariantID, item.Price, item.Qty,
+			)
+		}
+
+		// 2. Обрабатываем комментарий (если пустой, пишем "Нет")
+		comment := o.Customer.Comment
+		if comment == "" {
+			comment = "Нет"
+		}
+
+		// 3. Формируем финальный красивый текст сообщения
+		text := fmt.Sprintf(
+			"🛍️ **НОВЫЙ ЗАКАЗ НА САЙТЕ!**\n\n"+
+				"👤 **Клиент:**\n"+
+				"• Имя: %s\n"+
+				"• Телефон: `%s`\n"+
+				"• Комментарий: %s\n\n"+
+				"📦 **Состав заказа:**\n%s\n"+
+				"💵 **Итого к оплате:** %s руб.\n"+
+				"📅 **Дата:** %s",
+			o.Customer.Name, o.Customer.Phone, comment, itemsList, o.Total, o.CreatedAt,
+		)
+
+		msg := tgbotapi.NewMessage(adminChatID, text)
+		msg.ParseMode = "Markdown"
+
+		_, err := bot.Send(msg)
+		if err != nil {
+			fmt.Println("Ошибка отправки уведомления в Telegram:", err)
+		}
+	}(order)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 	})
+
 }
 
 func GetCategories(c *gin.Context, db *database_folder.DB) {

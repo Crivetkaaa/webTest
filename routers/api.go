@@ -5,9 +5,10 @@ import (
 	"webTest/handlers"
 
 	"github.com/gin-gonic/gin"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func APIRouters(api *gin.RouterGroup, db *database_folder.DB) {
+func APIRouters(api *gin.RouterGroup, db *database_folder.DB, bot *tgbotapi.BotAPI, adminID int) {
 	api.GET("/mini_categories", func(ctx *gin.Context) {
 		handlers.GetMiniNavbar(ctx, db)
 	})
@@ -24,7 +25,7 @@ func APIRouters(api *gin.RouterGroup, db *database_folder.DB) {
 	})
 
 	api.POST("/orders", func(ctx *gin.Context) {
-		handlers.PostOrders(ctx, db)
+		handlers.PostOrders(ctx, db, bot, adminID)
 	})
 
 	api.GET("/categories", func(ctx *gin.Context) {
