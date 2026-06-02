@@ -12,7 +12,7 @@ import (
 
 func Init() *tgbotapi.BotAPI {
 	token := os.Getenv("BOT_TOKEN")
-	proxy := os.Getenv("PROXY")
+	proxy := "http://avWSr:DzcPN9@45.130.129.149:8000"
 	if token == "" {
 		log.Panic("BOT_TOKEN не задан!")
 	}
