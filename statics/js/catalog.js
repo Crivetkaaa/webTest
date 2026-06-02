@@ -101,9 +101,11 @@ export async function initCatalog() {
             `/product/${slug}`
         );
 
+        const id = card.dataset.id
         const res = await fetch(`/api/product/${slug}`);
         const product = await res.json();
-
+        product.ID = Number(id)
+        console.log(product)
         openProductModal(product);
     });
 }

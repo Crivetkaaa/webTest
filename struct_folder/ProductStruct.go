@@ -13,6 +13,7 @@ type Variant struct {
 }
 
 type Product struct {
+	ID             int
 	Name           string
 	Url            string
 	Photo          []string
@@ -45,6 +46,7 @@ type OrderItem struct {
 	Name      string  `json:"name"`
 	Price     float64 `json:"price"`
 	Qty       int     `json:"quantity"` // Ожидает "quantity"
+	Url       string  `json:url`
 }
 
 type OrderData struct {

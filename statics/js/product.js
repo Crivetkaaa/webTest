@@ -47,6 +47,8 @@ export function openProductModal(product, prev = "/") {
     renderVariants(product.Variants);
     setupPhotoNavigation(photos);
 
+    document.getElementById("submit").dataset.productId = product.ID;
+
     modal.style.display = "block";
 }
 

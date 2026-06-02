@@ -55,15 +55,16 @@ export function initCart() {
 
         const opt = select.options[select.selectedIndex];
 
-        const item = {
-            variant_id: Number(opt.dataset.id),
-            title: document.getElementById("modal-title").textContent,
-            image: document.getElementById("main-image").src,
-            url: window.location.pathname,
-            volume: opt.value,
-            price: Number(opt.dataset.price),
-            quantity: 1
-        };
+const item = {
+    id: Number(document.getElementById("submit").dataset.productId) || 0,
+    variant_id: Number(opt.dataset.id),
+    title: document.getElementById("modal-title").textContent,
+    image: document.getElementById("main-image").src,
+    url: window.location.pathname,
+    volume: opt.value,
+    price: Number(opt.dataset.price),
+    quantity: 1
+};
 
         const cart = getCart();
 
@@ -92,11 +93,12 @@ export function initCart() {
 const order = {
     customer: Object.fromEntries(new FormData(e.target)),
     items: cart.map(i => ({
-        id: 0,
+        id: Number(i.id),
         variant_id: Number(i.variant_id) || 0,
         name: i.title || "",
         price: Number(i.price) || 0,
-        quantity: Number(i.quantity) || 1
+        quantity: Number(i.quantity) || 1,
+        url: i.url
     })),
     total: String(cart.reduce((s, i) => s + i.price * i.quantity, 0)),
     createdAt: new Date().toISOString()

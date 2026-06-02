@@ -160,38 +160,48 @@ func PostOrders(c *gin.Context, db *database_folder.DB, bot *tgbotapi.BotAPI, ad
 	}
 
 	go func(o struct_folder.OrderData) {
-		var adminChatID int64 = int64(adminID) // ⚠️ ЗАМЕНИТЕ НА ВАШ CHAT ID (число)
+		var adminChatID int64 = int64(adminID)
 
-		// 1. Собираем список товаров в цикле
+		fmt.Println(o.Items[0].Url)
+
 		var itemsList string
+
 		for i, item := range o.Items {
 			itemsList += fmt.Sprintf(
-				"%d. %s (Вариант: %d)\n   Цена: %.2f руб. | Кол-во: %d шт.\n",
-				i+1, item.Name, item.VariantID, item.Price, item.Qty,
+				"%d. <a href=\"https://shopaholicuray.ru%s\">%s</a> (Вариант: %d)\n   Цена: %.2f руб. | Кол-во: %d шт.\n\n",
+				i+1,
+				item.Url,
+				item.Name,
+				item.VariantID,
+				item.Price,
+				item.Qty,
 			)
 		}
 
-		// 2. Обрабатываем комментарий (если пустой, пишем "Нет")
 		comment := o.Customer.Comment
 		if comment == "" {
 			comment = "Нет"
 		}
 
-		// 3. Формируем финальный красивый текст сообщения
 		text := fmt.Sprintf(
-			"🛍️ **НОВЫЙ ЗАКАЗ НА САЙТЕ!**\n\n"+
-				"👤 **Клиент:**\n"+
+			"🛍️ <b>НОВЫЙ ЗАКАЗ НА САЙТЕ!</b>\n\n"+
+				"👤 <b>Клиент:</b>\n"+
 				"• Имя: %s\n"+
-				"• Телефон: `%s`\n"+
+				"• Телефон: <code>%s</code>\n"+
 				"• Комментарий: %s\n\n"+
-				"📦 **Состав заказа:**\n%s\n"+
-				"💵 **Итого к оплате:** %s руб.\n"+
-				"📅 **Дата:** %s",
-			o.Customer.Name, o.Customer.Phone, comment, itemsList, o.Total, o.CreatedAt,
+				"📦 <b>Состав заказа:</b>\n%s"+
+				"💵 <b>Итого:</b> %s руб.\n"+
+				"📅 <b>Дата:</b> %s",
+			o.Customer.Name,
+			o.Customer.Phone,
+			comment,
+			itemsList,
+			o.Total,
+			o.CreatedAt,
 		)
 
 		msg := tgbotapi.NewMessage(adminChatID, text)
-		msg.ParseMode = "Markdown"
+		msg.ParseMode = "HTML"
 
 		_, err := bot.Send(msg)
 		if err != nil {
