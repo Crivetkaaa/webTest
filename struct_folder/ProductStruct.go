@@ -72,6 +72,7 @@ type ProductInfo struct {
 	Unit  string
 	Count int
 	Price int
+	Url   string
 }
 
 type AdminInfo struct {

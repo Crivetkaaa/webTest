@@ -715,18 +715,21 @@ func (db *DB) GetOrdersAdmin(limit, offset int, status string) ([]struct_folder.
 
 	return adminInfo, nil
 }
-
 func (db *DB) getOrdersInfo(info *[]struct_folder.AdminInfo) error {
-	// Читаем сохраненные текстовые поля напрямую из истории без JOIN с каталогом товаров
+	// Делаем LEFT JOIN с product_variants и products, чтобы вытащить slug товара.
+	// COALESCE вернет пустую строку, если товар вдруг был полностью удален из базы.
 	query := `
 		SELECT 
-			product_name, 
-			variant_value, 
-			variant_unit, 
-			quantity, 
-			price_at_purchase
-		FROM order_items
-		WHERE order_id = ?
+			oi.product_name, 
+			oi.variant_value, 
+			oi.variant_unit, 
+			oi.quantity, 
+			oi.price_at_purchase,
+			COALESCE(p.slug, '') AS product_slug
+		FROM order_items oi
+		LEFT JOIN product_variants pv ON oi.variant_id = pv.id
+		LEFT JOIN products p ON pv.product_id = p.id
+		WHERE oi.order_id = ?
 	`
 	for i := range *info {
 		rows, err := db.Db.Query(query, (*info)[i].OrdersInfo.Id)
@@ -734,24 +737,38 @@ func (db *DB) getOrdersInfo(info *[]struct_folder.AdminInfo) error {
 			return err
 		}
 
-		// ВАЖНО: Инициализируем слайс как пустой массив [], а не через var.
-		// Благодаря этому json.Marshal вернет во фронтенд массив "ProductInfo": [], а не null.
 		items := []struct_folder.ProductInfo{}
 
 		for rows.Next() {
 			var item struct_folder.ProductInfo
+			var slug string
 
-			// Сканируем исторические архивные данные в структуру ProductInfo
-			err := rows.Scan(&item.Name, &item.Value, &item.Unit, &item.Count, &item.Price)
+			// Сканируем slug во временную переменную
+			err := rows.Scan(
+				&item.Name,
+				&item.Value,
+				&item.Unit,
+				&item.Count,
+				&item.Price,
+				&slug,
+			)
 			if err != nil {
 				rows.Close()
 				return err
 			}
+
+			// Формируем итоговый URL товара.
+			// Измените "/product/" на ваш реальный роут фронтенда.
+			if slug != "" {
+				item.Url = "/product/" + slug
+			} else {
+				item.Url = "" // Если товар удален из каталога
+			}
+
 			items = append(items, item)
 		}
 		rows.Close()
 
-		// Сохраняем массив обратно в заказ
 		(*info)[i].ProductInfo = items
 	}
 	return nil

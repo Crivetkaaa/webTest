@@ -214,19 +214,26 @@ function openOrder(id) {
     document.getElementById("m-total").innerText = info.TotalPrice + " ₽";
     document.getElementById("m-status-select").value = info.Status;
 
-    const itemsEl = document.getElementById("m-items");
-    itemsEl.innerHTML = products.map(p => `
-        <li class="flex justify-between items-start border-b border-gray-50 pb-2">
+        const itemsEl = document.getElementById("m-items");
+    itemsEl.innerHTML = products.map(p => {
+        // Если ссылка есть, оборачиваем имя в <a>, иначе оставляем просто текст
+        const nameHtml = p.Url 
+            ? `<a href="${p.Url}" target="_blank" class="font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition">${p.Name} ↗</a>`
+            : `<span class="font-medium text-gray-900">${p.Name} (Удален из каталога)</span>`;
+
+        return `
+        <li class="flex justify-between items-start border-b border-gray-100 pb-2">
             <div>
-                <div class="font-medium text-gray-900">${p.Name}</div>
+                <div class="mb-0.5">${nameHtml}</div>
                 <div class="text-xs text-gray-500">${p.Value} ${p.Unit}</div>
             </div>
             <div class="text-right">
-                <div class="text-sm font-semibold">${p.Price} ₽ x ${p.Count}</div>
-                <div class="text-xs text-indigo-500">${p.Price * p.Count} ₽</div>
+                <div class="text-sm font-semibold text-gray-800">${p.Price} ₽ x ${p.Count}</div>
+                <div class="text-xs font-medium text-indigo-500">${p.Price * p.Count} ₽</div>
             </div>
-        </li>
-    `).join("");
+        </li>`;
+    }).join("");
+
 
     document.getElementById("order-modal").style.display = "flex";
 }
