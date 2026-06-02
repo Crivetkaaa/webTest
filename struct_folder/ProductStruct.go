@@ -1,10 +1,5 @@
 package struct_folder
 
-var photos = []string{
-	"http://188.32.24.142:27012/api/photo/12.png",
-	"http://188.32.24.142:27012/api/photo/13.png",
-}
-
 type Variant struct {
 	Id    []int
 	Value []string
@@ -46,7 +41,7 @@ type OrderItem struct {
 	Name      string  `json:"name"`
 	Price     float64 `json:"price"`
 	Qty       int     `json:"quantity"` // Ожидает "quantity"
-	Url       string  `json:url`
+	Url       string  `json:"url"`
 }
 
 type OrderData struct {
