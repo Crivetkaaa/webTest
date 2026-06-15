@@ -1,25 +1,28 @@
+let lastProductId = 0 
 let offset = 0
 let category = ""
 let subcategory = ""
+let limit = 2
 
 
-let limit = 20
 async function getCategories() {
     const response = await fetch("/api/categories")
     const data = await response.json()
     return data
 }
+
+
 async function getProducts() {
     const bigCat = document.getElementById("category")
     const miniCat = document.getElementById("subcategory")
 
+    // Изменили offset=${offset} на cursor=${lastProductId}
     const response = await fetch(
-        `/api/get_products?type=${bigCat.value}&category=${miniCat.value}&offset=${offset}&limit=${limit}`
+        `/api/get_products?type=${bigCat.value}&category=${miniCat.value}&cursor=${lastProductId}&limit=${limit}`
     )
 
     let data = await response.json()
 
-    // защита от null
     if (!Array.isArray(data)) {
         data = []
     }
@@ -32,10 +35,14 @@ async function getProducts() {
         loadMore.style.display = "block"
     }
 
-    offset += data.length
+    // КРИТИЧЕСКИЙ ТОЧКА: запоминаем ID последнего товара для следующего запроса
+    if (data.length > 0) {
+        lastProductId = data[data.length - 1].ID 
+    }
 
     return data
 }
+
 
 function addOption(cat) {
     const bigCat = document.getElementById("category")
