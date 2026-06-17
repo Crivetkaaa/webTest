@@ -1,35 +1,45 @@
 
 /* Навигация */
 .main-nav {
+    position: sticky;
+    top: 0;
     width: 100%;
-    padding: 15px 0;
-    background-color: #fff;
-    border-bottom: 1px solid #eee;
+    padding: 20px 0;
+    background-color: rgba(253, 252, 251, 0.85); /* Glassmorphic pearl background */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(234, 230, 225, 0.6);
+    z-index: 1000;
+    transition: var(--transition-smooth);
+    display: flex;
     justify-content: center;
 }
 
 .nav-container {
     display: flex;
-    justify-content: space-between; /* Распределяет: лево, центр, право */
+    justify-content: space-between;
     align-items: center;
-    padding: 0 20px;
+    padding: 0 24px;
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
+    position: relative;
 }
 
 .nav-container a {
     text-decoration: none;
-    color: #333;
-    font-size: 16px;
-    font-weight: 500;
+    color: var(--color-primary);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: color 0.3s;
+    letter-spacing: 0.2em;
+    transition: var(--transition-smooth);
     text-align: center;
 }
 
 .nav-container a:hover {
-    color: #888;
+    color: var(--color-accent);
 }
 
 .nav-item {
@@ -37,56 +47,70 @@
     display: inline-block;
 }
 
-.nav-container {
+.nav-spacer {
+    flex: 1;
     display: flex;
-    justify-content: space-between; /* Ссылки слева, поиск справа */
+}
+
+.nav-actions {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
     align-items: center;
-    padding: 0 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-    position: relative;
-}
-
-.nav-spacer, 
-.nav-actions {
-    flex: 1; /* Занимают равное пространство */
-    display: flex;
-}
-
-.nav-actions {
-    justify-content: flex-end; /* Смещает иконку поиска в самый край */
 }
 
 .search-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 8px;
-    color: #333;
-    transition: color 0.3s, transform 0.2s;
+    padding: 10px;
+    color: var(--color-primary);
+    transition: var(--transition-smooth);
     display: flex;
     align-items: center;
+    justify-content: center;
+    border-radius: 50%;
 }
 
 .search-btn:hover {
-    color: #000;
-    transform: scale(1.1);
+    color: var(--color-accent-dark);
+    background-color: rgba(184, 152, 108, 0.08);
+    transform: scale(1.05);
 }
 
 .nav-links {
     display: flex;
-    gap: 40px; /* Расстояние между категориями */
+    gap: 36px;
     justify-content: center;
-    flex: 2; /* Даем центральному блоку больше места */
+    flex: 2;
 }
 
 .nav-links a {
     text-decoration: none;
-    color: #333;
-    font-size: 16px;
-    font-weight: 500;
+    color: var(--color-primary);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
-    white-space: nowrap; /* Чтобы категории не переносились */
+    white-space: nowrap;
+    position: relative;
+    padding: 6px 0;
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 1px;
+    background-color: var(--color-accent);
+    transition: var(--transition-smooth);
+}
+
+.nav-links a:hover::after {
+    width: 80%;
 }
 
 .search-wrapper {
@@ -99,61 +123,76 @@
     width: 0;
     opacity: 0;
     border: none;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--color-accent-light);
     outline: none;
-    padding: 5px 0;
-    transition: all 0.4s ease; /* Плавная анимация */
-    font-size: 14px;
+    padding: 6px 0;
+    transition: var(--transition-smooth);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
     background: transparent;
+    color: var(--color-primary);
 }
 
-/* Класс, который мы будем добавлять через JS */
+.search-field::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.6;
+}
+
+/* Активация инпута */
 .search-field.active {
-    width: 200px; /* Ширина развернутой строки */
+    width: 220px;
     opacity: 1;
-    margin-right: 10px;
+    margin-right: 12px;
+    padding-left: 5px;
 }
 
+/* Адаптив */
 @media (max-width: 768px) {
+    .main-nav {
+        padding: 15px 0;
+    }
+
     .nav-container {
-        display: flex;
-        justify-content: center; /* Центрируем содержимое */
-        position: relative;
-        padding: 0 15px;
+        padding: 0 16px;
     }
 
     .nav-spacer {
-        display: none; /* Убираем левый отступ */
+        display: none;
     }
 
     .nav-links {
-        flex: 0 1 auto; /* Блок занимает только столько места, сколько нужно тексту */
+        flex: 1;
         justify-content: center;
-        gap: 15px;
-        margin: 0 auto; /* Гарантирует центр */
+        gap: 16px;
+    }
+
+    .nav-links a {
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
     }
 
     .nav-actions {
-        position: absolute; /* Вырываем поиск из потока */
-        right: 15px;       /* Прижимаем строго к правому краю контейнера */
+        position: absolute;
+        right: 16px;
         top: 50%;
-        transform: translateY(-50%); /* Центрируем иконку по вертикали */
+        transform: translateY(-50%);
         flex: none;
     }
 
-    /* Адаптация инпута, чтобы он не ломал центр при активации */
     .search-field.active {
         position: absolute;
         right: 0;
-        
         top: 50%;
         transform: translateY(-50%);
-        width: calc(100vw - 70px); /* Почти вся ширина экрана */
-        background: white;
+        width: calc(100vw - 80px);
+        background: var(--color-bg);
         z-index: 100;
-        font-size: 16px !important;
-        border-radius: 0; 
+        font-size: 0.95rem !important;
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+        padding: 10px 15px;
+        box-shadow: var(--shadow-hover);
+        margin-right: 0;
     }
-    
 }
 
