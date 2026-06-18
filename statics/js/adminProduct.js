@@ -318,7 +318,7 @@ function drawModal(product, allSubcategories, isCreate = false) {
     attrBlock.appendChild(addAttrBtn)
     content.appendChild(attrBlock)
 
-    // ======================
+      // ======================
     // 📂 КАТЕГОРИИ
     // ======================
     const catBlock = document.createElement("div")
@@ -340,10 +340,30 @@ function drawModal(product, allSubcategories, isCreate = false) {
             checkbox.checked = true
         }
 
+        checkbox.onchange = (e) => {
+            const isPerfumeCategory = sub.name && sub.name.includes("Парфюм");
+
+            if (e.target.checked && isPerfumeCategory) {
+                if (typeof unitInput !== "undefined") {
+                    unitInput.value = "мл"
+                }
+
+                if (typeof variantsContainer !== "undefined") {
+                    variantsContainer.innerHTML = ""
+                    variantsContainer.appendChild(createVariantRow("5", ""))
+                    variantsContainer.appendChild(createVariantRow("10", ""))
+                    variantsContainer.appendChild(createVariantRow("15", ""))
+                    variantsContainer.appendChild(createVariantRow("20", ""))
+                    variantsContainer.appendChild(createVariantRow("30", ""))
+                }
+            }
+        }
+
         label.appendChild(checkbox)
         label.append(` ${sub.name}`)
         catContainer.appendChild(label)
     })
+
 
     catBlock.appendChild(title("Подкатегории"))
     catBlock.appendChild(catContainer)
