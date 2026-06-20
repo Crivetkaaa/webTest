@@ -13,6 +13,8 @@ const limit = 20;
 let isLoading = false;
 let allLoaded = false;
 
+let observer = null;
+
 const currentMainCategory =
     window.location.pathname.split("/")[1] || "parfume";
 
@@ -55,6 +57,28 @@ export async function initCatalog() {
                 </div>
             `;
         }
+    }
+
+    // -------------------------
+    // INFINITE SCROLL (Авто-клик при прокрутке)
+    // -------------------------
+    const btn = document.getElementById("load-more");
+    if (btn) {
+        // Если observer уже был создан ранее, отключаем его перед созданием нового
+        if (observer) observer.disconnect();
+
+        observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                // Если кнопка появилась в зоне видимости и сейчас нет активной загрузки
+                if (entry.isIntersecting && !isLoading && !allLoaded) {
+                    loadNextPage();
+                }
+            });
+        }, {
+            rootMargin: "0px 0px 200px 0px" // Начнет загрузку за 200px до того, как пользователь долистает до кнопки
+        });
+
+        observer.observe(btn);
     }
 
     // -------------------------
@@ -183,21 +207,25 @@ export async function loadProducts(type, subcategory, append = false) {
         }
 
         // -------------------------
-        // PAGINATION STATE
+        // PAGINATION STATE (Исчезновение кнопки)
         // -------------------------
         lastProductId = data[data.length - 1].ID;
 
+        // Если пришло меньше товаров, чем лимит, значит это последняя страница
         if (data.length < limit) {
             allLoaded = true;
-            if (btn) btn.style.display = "none";
+            if (btn) btn.style.display = "none"; // Прячем кнопку полностью
         } else {
-            if (btn) btn.style.display = "block";
+            if (btn) btn.style.display = "block"; // Показываем, если товары еще есть
         }
 
+    } catch (error) {
+        console.error("Ошибка загрузки товаров:", error);
     } finally {
         isLoading = false;
     }
 }
+
 
 // -------------------------
 // LOAD MORE SUPPORT
