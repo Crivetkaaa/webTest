@@ -1,18 +1,14 @@
 package struct_folder
 
-var photos = []string{
-	"http://188.32.24.142:27012/api/photo/12.png",
-	"http://188.32.24.142:27012/api/photo/13.png",
-}
-
 type Variant struct {
 	Id    []int
-	Value []int
+	Value []string
 	Price []int
 	Unit  string
 }
 
 type Product struct {
+	ID             int
 	Name           string
 	Url            string
 	Photo          []string
@@ -31,10 +27,12 @@ type MiniProducts struct {
 }
 
 type BonusInfoProduct struct {
+	Name           string
 	Decscription   string
 	Characteristic []map[string]string
 	Photo          []string
 	Variants       Variant
+	Categories     []string
 }
 
 type OrderItem struct {
@@ -43,17 +41,63 @@ type OrderItem struct {
 	Name      string  `json:"name"`
 	Price     float64 `json:"price"`
 	Qty       int     `json:"quantity"` // Ожидает "quantity"
+	Url       string  `json:"url"`
 }
 
 type OrderData struct {
-	Customer  CustomerInfo `json:"customer"`
-	Items     []OrderItem  `json:"items"`
-	Total     string       `json:"total"`
-	CreatedAt string       `json:"createdAt"`
+	Customer  CustomerInfo `json:"customer" binding:"required"`
+	Items     []OrderItem  `json:"items" binding:"required"`
+	Total     string       `json:"total" binding:"required"`
+	CreatedAt string       `json:"createdAt" binding:"required"`
 }
 
 type CustomerInfo struct {
-	Name    string `json:"name"`    // соответствует name="name" в HTML-форме
-	Phone   string `json:"phone"`   // соответствует name="phone"
-	Comment string `json:"comment"` // соответствует name="comment"
+	Name    string `json:"name" binding:"required"`
+	Phone   string `json:"phone" binding:"required"`
+	Comment string `json:"comment"` // Может быть пустым, тег не нужен
+}
+
+type OrdersInfo struct {
+	Id           int
+	Created_at   string
+	CustomerName string
+	Phone        string
+	TotalPrice   int
+	Status       string
+}
+
+type ProductInfo struct {
+	Name  string
+	Value string
+	Unit  string
+	Count int
+	Price int
+	Url   string
+}
+
+type AdminInfo struct {
+	OrdersInfo  OrdersInfo
+	ProductInfo []ProductInfo
+}
+
+type VariantDTO struct {
+	Unit  string   `json:"Unit"`
+	Value []string `json:"Value"`
+	Price []string `json:"Price"`
+}
+
+type CharacteristicDTO struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type UpdateProductData struct {
+	ID              int
+	Name            string
+	Description     string
+	Variants        VariantDTO          // Из прошлого ответа
+	Characteristics []CharacteristicDTO // Из прошлого ответа
+	ExistingPhotos  []string            // Список путей
+	NewPhotoPaths   []string            // Сюда запишете пути после c.SaveUploadedFile
+	Subcategories   []string
 }

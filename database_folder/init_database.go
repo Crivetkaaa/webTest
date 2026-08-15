@@ -6,7 +6,7 @@ import (
 )
 
 func CreateDB() (*DB, error) {
-	db, err := sql.Open("sqlite3", "database_folder/db.db")
+	db, err := sql.Open("sqlite", "database_folder/db.db")
 	if err != nil {
 		return nil, err
 	}

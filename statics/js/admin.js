@@ -26,7 +26,19 @@ async function SendParam(data) {
         })
     
         const result = await response.json()
-        window.location.href = result["redirect"]
+        const href = result["redirect"]
+        const resBool = result["success"]
+
+        if (!resBool) {
+            const errPage = document.getElementById("errMessage")
+            errPage.style.color = "red"
+            errPage.style.display = "flex"
+            errPage.style.justifyContent = "center"
+            errPage.style.alignItems = "center"
+            errPage.textContent = result["message"]
+        } else {
+            window.location.href = href
+        }
 
     } catch(error) {
         console.log(error)

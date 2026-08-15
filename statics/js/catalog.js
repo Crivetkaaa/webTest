@@ -1,54 +1,114 @@
 import { openProductModal } from "./product.js";
-
-let previousPage = "/";
+import { setLastListUrl } from "./router.js";
 
 // -------------------------
-// INIT
+// STATE
+// -------------------------
+let searchQuery = "";
+let currentSubCategory = "";
+
+let lastProductId = 0;
+const limit = 20;
+
+let isLoading = false;
+let allLoaded = false;
+
+let observer = null;
+
+const currentMainCategory =
+    window.location.pathname.split("/")[1] || "parfume";
+
+// -------------------------
+// SEARCH API
+// -------------------------
+export function setSearch(query) {
+    const container = document.getElementById("products-container");
+    if (container) container.innerHTML = "";
+    searchQuery = query.trim();
+
+    lastProductId = 0;
+    allLoaded = false;
+
+    currentSubCategory = window.location.pathname.split("/")[2] || "";
+
+    loadProducts(currentMainCategory, currentSubCategory, false);
+}
+
+// -------------------------
+// INIT CATALOG
 // -------------------------
 export async function initCatalog() {
-    const category = window.location.pathname.split("/")[1];
-
     const miniContainer = document.getElementById("mini-navbar");
+    if (!miniContainer) return;
 
-    const resCats = await fetch(`/api/mini_categories?category=${category}`);
-    const categories = await resCats.json();
+    const res = await fetch(`/api/mini_categories?category=${currentMainCategory}`);
+    const categories = await res.json();
 
-    const allButton = `
-        <a href="/${category}" data-slug="">
-            Все
-        </a>
-    `;
+    if (categories != null) {
+        if (categories.length > 1) {
+            miniContainer.innerHTML = `
+                <div class="category">
+                    <a href="/${currentMainCategory}" data-slug="">Все</a>
+                    ${categories.map(item => `
+                        <a href="/${currentMainCategory}/${item.slug}" data-slug="${item.slug}">
+                            ${item.name}
+                        </a>
+                    `).join("")}
+                </div>
+            `;
+        }
+    }
 
-    miniContainer.innerHTML =
-        allButton +
-        categories.map(item =>
-            `<a href="/${category}/${item.slug}" data-slug="${item.slug}">
-                ${item.name}
-            </a>`
-        ).join("");
+    // -------------------------
+    // INFINITE SCROLL (Авто-клик при прокрутке)
+    // -------------------------
+    const btn = document.getElementById("load-more");
+    if (btn) {
+        // Если observer уже был создан ранее, отключаем его перед созданием нового
+        if (observer) observer.disconnect();
 
-    await loadProducts(category, "");
+        observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                // Если кнопка появилась в зоне видимости и сейчас нет активной загрузки
+                if (entry.isIntersecting && !isLoading && !allLoaded) {
+                    loadNextPage();
+                }
+            });
+        }, {
+            rootMargin: "0px 0px 200px 0px" // Начнет загрузку за 200px до того, как пользователь долистает до кнопки
+        });
 
-    // фильтр
+        observer.observe(btn);
+    }
+
+    // -------------------------
+    // CATEGORY CLICK
+    // -------------------------
     miniContainer.addEventListener("click", (e) => {
         const link = e.target.closest("a");
         if (!link) return;
 
         e.preventDefault();
 
-        const sub = link.dataset.slug;
+        const sub = link.dataset.slug || "";
 
-        if (!sub) {
-            history.pushState({}, "", `/${category}`);
-            loadProducts(category, "");
-            return;
-        }
+        currentSubCategory = sub;
+        searchQuery = "";
 
-        history.pushState({}, "", `/${category}/${sub}`);
-        loadProducts(category, sub);
+        lastProductId = 0;
+        allLoaded = false;
+
+        history.pushState({}, "", sub
+            ? `/${currentMainCategory}/${sub}`
+            : `/${currentMainCategory}`
+        );
+
+        loadProducts(currentMainCategory, sub, false);
     });
 
-    // клик по карточке
+    // -------------------------
+    // PRODUCT CLICK
+    // -------------------------
     document.addEventListener("click", async (e) => {
         const card = e.target.closest(".product_card");
         if (!card) return;
@@ -56,110 +116,131 @@ export async function initCatalog() {
         e.preventDefault();
 
         const slug = card.dataset.slug;
-        if (!slug) return;
 
-        previousPage = window.location.pathname;
+        setLastListUrl(window.location.pathname);
 
-        history.pushState({}, "", `/product/${slug}`);
+        history.pushState(
+            { type: "product", slug },
+            "",
+            `/product/${slug}`
+        );
 
+        const id = card.dataset.id
         const res = await fetch(`/api/product/${slug}`);
         const product = await res.json();
-
-        openProductModal(product, previousPage);
+        product.ID = Number(id)
+        console.log(product)
+        openProductModal(product);
     });
 }
 
 // -------------------------
 // LOAD PRODUCTS
 // -------------------------
-let currentOffset = 0;
-const limit = 20;
-let isLoading = false;
-let allLoaded = false; // Флаг, чтобы не спамить запросами, если товары кончились
-
 export async function loadProducts(type, subcategory, append = false) {
-    if (isLoading || allLoaded) return;
+    if (isLoading || (allLoaded && append)) return;
+
     isLoading = true;
+
+    const container = document.getElementById("products-container");
+    const btn = document.getElementById("load-more");
+    if (!container) {
+        isLoading = false;
+        return;
+    }
 
     try {
         const res = await fetch(
-            `/api/get_products?type=${type}&category=${subcategory}&limit=${limit}&offset=${currentOffset}`
+            `/api/get_products?type=${type}` +
+            `&category=${subcategory}` +
+            `&limit=${limit}` +
+            `&cursor=${lastProductId}` +
+            `&search=${encodeURIComponent(searchQuery)}`
         );
 
         const data = await res.json();
-        const container = document.getElementById("products-container");
-        const buttonWrapper = document.querySelector(".button-container");
 
-        // Если данных нет — скрываем кнопку и выходим
-        if (!data || data.length === 0) {
+        // -------------------------
+        // EMPTY RESULT
+        // -------------------------
+        if (!data || !data.length) {
             allLoaded = true;
-            if (buttonWrapper) buttonWrapper.style.display = "none";
+            if (btn) btn.style.display = "none";
+            if (!append) container.innerHTML = "Товары не найдены";
             return;
         }
 
-        // Рендерим карточки
+        // -------------------------
+        // RESET ON NEW SEARCH / CATEGORY
+        // -------------------------
+        if (!append) {
+            container.innerHTML = "";
+        }
+
+        // -------------------------
+        // RENDER
+        // -------------------------
         const html = data.map(p => `
-            <div class="product_card" data-slug="${p.Url}">
+            <div class="product_card" data-slug="${p.Url}" data-id="${p.ID}">
                 <a href="/product/${p.Url}">
                     <img src="/${p.MainPhoto}" class="product_image">
-                    <p class="product_name_p">${p.Name}</p>
-                    <div class="product_real_price">${p.Price} ₽</div>
-                    <div class="product_price">Подробнее</div>
+
+                    <p class="product_name_p">
+                        ${p.Name}
+                    </p>
+
+                    <div class="product_real_price">
+                        ${p.Price} ₽
+                    </div>
+
+                    <div class="product_price">
+                        Подробнее
+                    </div>
                 </a>
             </div>
         `).join("");
 
         if (append) {
-            container.insertAdjacentHTML('beforeend', html);
+            container.insertAdjacentHTML("beforeend", html);
         } else {
             container.innerHTML = html;
         }
 
-        // Если пришло меньше лимита — товары закончились
+        // -------------------------
+        // PAGINATION STATE (Исчезновение кнопки)
+        // -------------------------
+        lastProductId = data[data.length - 1].ID;
+
+        // Если пришло меньше товаров, чем лимит, значит это последняя страница
         if (data.length < limit) {
             allLoaded = true;
-            if (buttonWrapper) buttonWrapper.style.display = "none";
+            if (btn) btn.style.display = "none"; // Прячем кнопку полностью
+        } else {
+            if (btn) btn.style.display = "block"; // Показываем, если товары еще есть
         }
 
-    } catch (err) {
-        console.error("Ошибка загрузки:", err);
+    } catch (error) {
+        console.error("Ошибка загрузки товаров:", error);
     } finally {
         isLoading = false;
     }
 }
 
-// Логика инициализации
-document.addEventListener("DOMContentLoaded", () => {
-    // 1. Сразу загружаем первую партию (offset 0)
-    loadProducts('parfume', '', false);
 
-    const loadMoreBtn = document.getElementById("load-more");
-    if (loadMoreBtn) {
-        
-        const fetchNext = () => {
-            if (!isLoading && !allLoaded) {
-                currentOffset += limit; // Прибавляем ТОЛЬКО при загрузке следующей части
-                loadProducts('parfume', '', true);
-            }
-        };
+// -------------------------
+// LOAD MORE SUPPORT
+// -------------------------
+export function loadNextPage() {
+    if (isLoading || allLoaded) return;
 
-        // Клик
-        loadMoreBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            fetchNext();
-        });
+    loadProducts(
+        currentMainCategory,
+        currentSubCategory,
+        true
+    );
+}
 
-        // Скролл (Intersection Observer)
-        const observer = new IntersectionObserver((entries) => {
-            // Сработает только если кнопка видна И первая партия уже загружена
-            if (entries[0].isIntersecting && currentOffset >= 0 && !isLoading) {
-                // Небольшая задержка, чтобы не было ложных срабатываний при старте
-                if (document.querySelectorAll('.product_card').length > 0) {
-                   fetchNext();
-                }
-            }
-        }, { threshold: 0.1 });
-
-        observer.observe(loadMoreBtn);
-    }
-});
+export function resetCatalog() {
+    lastProductId = 0;
+    allLoaded = false;
+}

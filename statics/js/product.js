@@ -1,39 +1,42 @@
-let savedMainPhoto = null;
+import { resetCatalog } from "./catalog.js";
+let currentPhotoIndex = 0;
+
+import { getLastListUrl } from "./router.js";
+import { loadProducts } from "./catalog.js";
+
 let currentPhoto = null;
 let previousPage = "/";
+let isAnimating = false; // Блокировка переключений во время анимации
 
-// -------------------------
-// INIT PRODUCT (SSR)
-// -------------------------
+// Сохраняем ссылку на обработчик клавиш, чтобы удалять его при закрытии
+let globalKeyHandler = null; 
+
 export function initProduct(isSSR = false) {
     const active = window.__ACTIVE_PRODUCT__;
 
-    // 🔥 SSR открытие
     if (isSSR && active) {
         openProductModal(active);
         history.replaceState({}, "", `/product/${active.Url}`);
     }
 
-    // кнопка закрытия
-    const btn = document.querySelector(".product-close");
-    if (btn) {
-        btn.addEventListener("click", closeProductModal);
-    }
+    document.querySelector(".product-close")
+        ?.addEventListener("click", closeProductModal);
 }
 
-// -------------------------
-// OPEN MODAL
-// -------------------------
 export function openProductModal(product, prev = "/") {
     previousPage = prev;
 
     const modal = document.getElementById("product-modal");
-
     const photos = product.Photo || [];
 
-    savedMainPhoto = photos[0] || "";
-    currentPhoto = savedMainPhoto;
+    currentPhotoIndex = 0;
+    isAnimating = false;
 
+    // Сбрасываем возможные CSS-классы анимации на картинке
+    const mainImage = document.getElementById("main-image");
+    if (mainImage) mainImage.className = "modal-main-image";
+
+    currentPhoto = photos[0] || "";
     setMainImage(currentPhoto);
 
     document.getElementById("modal-title").textContent = product.Name || "";
@@ -42,91 +45,98 @@ export function openProductModal(product, prev = "/") {
     renderThumbnails(photos);
     renderCharacteristics(product.Characteristic);
     renderVariants(product.Variants);
+    setupPhotoNavigation(photos);
+
+    document.getElementById("submit").dataset.productId = product.ID;
 
     modal.style.display = "block";
 }
 
-// -------------------------
-// CLOSE MODAL
-// -------------------------
 function closeProductModal() {
-    const modal = document.getElementById("product-modal");
-    modal.style.display = "none";
+    document.getElementById("product-modal").style.display = "none";
+    
+    // Удаляем слушатель клавиатуры, чтобы он не копился при повторных открытиях
+    if (globalKeyHandler) {
+        document.removeEventListener("keydown", globalKeyHandler);
+        globalKeyHandler = null;
+    }
 
-    const fromOwnSite =
-        document.referrer && document.referrer.includes(location.host);
+    const lastUrl = getLastListUrl();
 
-    const isReload =
-        performance.getEntriesByType("navigation")[0]?.type === "reload";
-
-    if (fromOwnSite && !isReload) {
-        history.pushState({}, "", previousPage || "/");
+    if (lastUrl === "/") {
+        window.location.href = "/";
         return;
     }
 
-    window.location.href = "/";
+    history.pushState({}, "", lastUrl);
+
+    const path = lastUrl.split("/");
+    const type = path[1] || "parfume";
+    const sub = path[2] || "";
+
+    resetCatalog();
+    loadProducts(type, sub, false);
 }
 
-// -------------------------
-// MAIN IMAGE
-// -------------------------
 function setMainImage(src) {
+    if (!src) return;
     if (!src.startsWith("/")) src = "/" + src;
-
-    currentPhoto = src;
     document.getElementById("main-image").src = src;
+    currentPhoto = src;
 }
 
-// -------------------------
-// THUMBNAILS
-// -------------------------
 function renderThumbnails(photos) {
     const container = document.querySelector(".modal-thumbnails");
 
     container.innerHTML = photos.map((p, i) => {
-        let src = p;
-        if (!src.startsWith("/")) src = "/" + src;
-
-        return `
-            <img 
-                class="modal-thumbnail ${i === 0 ? "active" : ""}"
-                src="${src}"
-                data-src="${src}"
-            >
-        `;
+        const src = p.startsWith("/") ? p : "/" + p;
+        return `<img class="modal-thumbnail ${i === 0 ? "active" : ""}" 
+                     src="${src}" data-src="${src}">`;
     }).join("");
 
     container.onclick = (e) => {
+        if (isAnimating) return;
         const img = e.target.closest(".modal-thumbnail");
         if (!img) return;
 
-        container.querySelectorAll(".modal-thumbnail")
-            .forEach(el => el.classList.remove("active"));
+        const imgs = Array.from(container.querySelectorAll(".modal-thumbnail"));
+        const targetIndex = imgs.indexOf(img);
+        
+        if (targetIndex === currentPhotoIndex) return;
 
-        img.classList.add("active");
+        // Определяем направление анимации по индексу кликнутой миниатюры
+        const direction = targetIndex > currentPhotoIndex ? "next" : "prev";
+        currentPhotoIndex = targetIndex;
 
-        setMainImage(img.dataset.src);
+        // Вызываем глобальную функцию смены с анимацией (она объявлена внутри setupPhotoNavigation)
+        if (window.__triggerPhotoChange) {
+            window.__triggerPhotoChange(direction);
+        }
     };
 }
 
-// -------------------------
-// CHARACTERISTICS
-// -------------------------
-function renderCharacteristics(data) {
-    const container = document.getElementById("characteristics");
+function syncThumbnailActive() {
+    const thumbs = document.querySelectorAll(".modal-thumbnail");
+    thumbs.forEach((t, i) => {
+        t.classList.toggle("active", i === currentPhotoIndex);
+    });
+}
 
-    if (!data || data.length === 0) {
-        container.innerHTML = "";
+function renderCharacteristics(data) {
+    const el = document.getElementById("characteristics");
+
+    if (!data?.length) {
+        el.innerHTML = "";
         return;
     }
 
-    container.innerHTML = `
+    el.innerHTML = `
         <table class="custom-table">
             <tbody>
-                ${data.map(item => `
+                ${data.map(i => `
                     <tr>
-                        <td>${item.key}</td>
-                        <td>${item.value}</td>
+                        <td>${i.key}</td>
+                        <td>${i.value}</td>
                     </tr>
                 `).join("")}
             </tbody>
@@ -134,253 +144,146 @@ function renderCharacteristics(data) {
     `;
 }
 
-// -------------------------
-// VARIANTS (SELECT)
-// -------------------------
-function renderVariants(variants) {
+function renderVariants(v) {
     const select = document.getElementById("volume-select");
-    if (!select || !variants) return;
+    if (!select || !v) return;
 
-    const values = variants.Value || [];
-    const prices = variants.Price || [];
-    const unit = variants.Unit || "";
-    const id = variants.Id || [];
+    const values = v.Value || [];
+    const unitText = v.Unit && v.Unit.trim() !== "" ? ` ${v.Unit}` : "";
 
-    if (values.length === 0) {
-        select.innerHTML = "";
-        return;
-    }
+    select.innerHTML = values.map((val, i) => `
+        <option value="${val}" data-price="${v.Price[i]}" data-id="${v.Id[i]}">
+            ${val}${unitText} — ${v.Price[i]} ₽
+        </option>
+    `).join("");
 
-    select.innerHTML = values.map((v, i) => {
-        const price = prices[i] ?? 0;
-        // Сохраняем чистую цену в data-price для JS
-        return `
-            <option value="${v}" data-price="${price}" data-id="${id[i]}">
-                ${v} ${unit} — ${price} ₽
-            </option>
-        `;
-    }).join("");
-}
+    if (values.length === 1) {
+        select.style.display = "none";
+        updateBuyButton(v.Price[0]);
+    } else {
+        select.style.display = "block";
 
-window.updateCartUI = function() {
-    const cart = JSON.parse(localStorage.getItem('cart')) || [];
-    const cartIcon = document.getElementById('cart-icon');
-    const cartCountElement = document.getElementById('cart-count');
-    const cartItemsContainer = document.getElementById('cart-items');
-    const cartTotalElement = document.getElementById('cart-total');
-
-    if (cartIcon) cartIcon.style.display = cart.length > 0 ? 'flex' : 'none';
-    
-    const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
-    if (cartCountElement) cartCountElement.innerText = totalQty;
-
-    if (cartItemsContainer && cartTotalElement) {
-        if (cart.length === 0) {
-            cartItemsContainer.innerHTML = 'Корзина пуста';
-            cartTotalElement.innerText = '0';
-        } else {
-            let totalSum = 0;
-            cartItemsContainer.innerHTML = cart.map((item, index) => {
-                totalSum += item.price * item.quantity;
-                return `
-            <div class="cart-item" style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; padding: 10px 0;">
-                <div style="flex: 1;">
-                    <!-- Ссылка на товар -->
-                    <a href="${item.url}" style="text-decoration: none; color: #333; display: block;">
-                        <div style="font-weight: bold; font-size: 14px; margin-bottom: 2px;">${item.title}</div>
-                    </a>
-                    <div style="font-size: 12px; color: #666;">${item.volume} — ${item.price} ₽</div>
-                </div>
-                
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button onclick="changeQuantity(${index}, -1)" style="width: 25px; height: 25px; cursor: pointer; border: 1px solid #ddd; background: #f9f9f9; border-radius: 4px;">-</button>
-                    <span style="min-width: 20px; text-align: center; font-weight: bold;">${item.quantity}</span>
-                    <button onclick="changeQuantity(${index}, 1)" style="width: 25px; height: 25px; cursor: pointer; border: 1px solid #ddd; background: #f9f9f9; border-radius: 4px;">+</button>
-                </div>
-
-                <button onclick="removeFromCart(${index})" style="color:red; cursor:pointer; border:none; background:none; font-size: 18px; margin-left: 10px;">&times;</button>
-            </div>
-        `;
-    }).join('');
-            cartTotalElement.innerText = totalSum;
-        }
-    }
-};
-
-
-// Функция удаления
-window.removeFromCart = function(index) {
-    let cart = JSON.parse(localStorage.getItem('cart')) || [];
-    cart.splice(index, 1);
-    localStorage.setItem('cart', JSON.stringify(cart));
-    window.updateCartUI();
-};
-window.changeQuantity = function(index, delta) {
-    let cart = JSON.parse(localStorage.getItem('cart')) || [];
-    
-    if (cart[index]) {
-        cart[index].quantity += delta;
-
-        // Если количество стало меньше 1 — удаляем товар
-        if (cart[index].quantity <= 0) {
-            cart.splice(index, 1);
-        }
-
-        localStorage.setItem('cart', JSON.stringify(cart));
-        window.updateCartUI();
-    }
-};
-
-
-// Логика открытия/закрытия модалки корзины
-// --- ДОБАВЛЕНИЕ В КОРЗИНУ ---
-document.addEventListener('click', (e) => {
-    // Слушаем клик по кнопке "Добавить", так как она может пересоздаваться
-    if (e.target && e.target.id === 'submit') {
-        const select = document.getElementById("volume-select");
-        
-        if (!select || select.options.length === 0) {
-            alert("Пожалуйста, выберите вариант товара");
-            return;
-        }
-
-        const selectedOption = select.options[select.selectedIndex];
-        console.log(selectedOption)
-        // Собираем данные
-const productData = {
-    // Получаем ID варианта из data-id выбранного option
-    variant_id: parseInt(selectedOption.getAttribute("data-id")), 
-    title: document.getElementById("modal-title").textContent,
-    image: currentPhoto,
-    url: window.location.pathname,
-    volume: selectedOption.value, 
-    price: parseInt(selectedOption.dataset.price) || 0,
-    quantity: 1
-};
-
-        // Сохранение
-        let cart = JSON.parse(localStorage.getItem("cart")) || [];
-        
-        // Проверяем, есть ли такой же товар с ТАКИМ ЖЕ объемом
-        const existingItem = cart.find(item => 
-            item.title === productData.title && item.volume === productData.volume
-        );
-
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            cart.push(productData);
-        }
-
-        localStorage.setItem("cart", JSON.stringify(cart));
-
-        // Обратная связь на кнопке
-        const originalText = e.target.innerText;
-        e.target.innerText = "Добавлено!";
-        e.target.style.backgroundColor = "#4CAF50"; // Зеленый цвет для наглядности
-        
-        setTimeout(() => {
-            e.target.innerText = originalText;
-            e.target.style.backgroundColor = "";
-        }, 1500);
-
-        // Обновляем иконку и содержимое корзины
-        window.updateCartUI();
-    }
-});
-
-// --- ЛОГИКА МОДАЛЬНОГО ОКНА КОРЗИНЫ ---
-document.addEventListener('DOMContentLoaded', () => {
-    
-    const cartIcon = document.getElementById('cart-icon');
-    const cartModal = document.getElementById('cart-modal');
-    const cartClose = document.querySelector('.cart-close');
-
-    // Открытие корзины
-    if (cartIcon) {
-        cartIcon.addEventListener('click', () => {
-            cartModal.style.display = 'flex'; // Используем flex для центрирования
-            window.updateCartUI(); // Обновляем данные при открытии
-        });
-    }
-
-    // Закрытие корзины на крестик
-    if (cartClose) {
-        cartClose.addEventListener('click', () => {
-            cartModal.style.display = 'none';
-        });
-    }
-
-    // Закрытие корзины при клике ВНЕ контента (на темный фон)
-    window.addEventListener('click', (e) => {
-        if (e.target === cartModal) {
-            cartModal.style.display = 'none';
-        }
-    });
-
-    // Инициализация (чтобы иконка появилась сразу, если в корзине уже что-то есть)
-    window.updateCartUI();
-});
-
-// --- ОТПРАВКА ЗАКАЗА ---
-const orderForm = document.getElementById('order-form');
-
-if (orderForm) {
-    orderForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const cart = JSON.parse(localStorage.getItem('cart')) || [];
-        
-        if (cart.length === 0) {
-            alert("Ваша корзина пуста");
-            return;
-        }
-
-        // Кнопка отправки (чтобы заблокировать от повторных кликов)
-        const submitBtn = orderForm.querySelector('.checkout-button');
-        submitBtn.disabled = true;
-        submitBtn.innerText = "Отправка...";
-
-        const formData = new FormData(orderForm);
-        
-        // Формируем объект для отправки
-        const orderData = {
-            customer: Object.fromEntries(formData.entries()), // Имя, телефон, комментарий
-            items: cart,                                     // Список товаров
-            total: document.getElementById('cart-total').innerText, // Итоговая сумма
-            createdAt: new Date().toISOString()
+        const setPrice = () => {
+            const selected = select.options[select.selectedIndex];
+            updateBuyButton(selected.dataset.price);
         };
 
-        try {
-            // ОТПРАВКА НА СЕРВЕР
-            const response = await fetch('/api/orders', { // Укажите здесь ваш URL
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(orderData)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                alert("Спасибо! Ваш заказ #" + (result.id || "") + " успешно оформлен.");
-                
-                // Очистка после успеха
-                localStorage.removeItem('cart');
-                window.updateCartUI();
-                document.getElementById('cart-modal').style.display = 'none';
-                orderForm.reset();
-            } else {
-                throw new Error('Ошибка сервера');
-            }
-        } catch (error) {
-            console.error("Ошибка при отправке заказа:", error);
-            alert("Произошла ошибка при отправке. Пожалуйста, попробуйте позже.");
-        } finally {
-            // Возвращаем кнопку в исходное состояние
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Оформить заказ";
-        }
-    });
+        setPrice();
+        select.onchange = setPrice;
+    }
 }
 
+function updateBuyButton(price) {
+    const btn = document.getElementById("submit");
+    if (!btn) return;
+
+    btn.textContent = `Добавить в корзину — ${price} ₽`;
+}
+
+function setupPhotoNavigation(photos) {
+    const modal = document.querySelector(".modal-main-container");
+    const mainImage = document.getElementById("main-image");
+
+    if (!modal || !mainImage || !photos?.length) return;
+
+    // Функция, выполняющая красивый сдвиг и подмену src
+    const changePhotoWithAnimation = (direction) => {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        // 1. Уводим старое фото в сторону
+        mainImage.classList.add(direction === "next" ? "slide-left-out" : "slide-right-out");
+
+        // 2. Ждем завершения первой фазы анимации (200ms)
+        setTimeout(() => {
+            let src = photos[currentPhotoIndex];
+            if (!src.startsWith("/")) src = "/" + src;
+            
+            mainImage.src = src;
+            currentPhoto = src;
+
+            // Сбрасываем старый класс и готовим к влёту с нужной стороны (без анимации `transition: none`)
+            mainImage.className = "modal-main-image";
+            mainImage.classList.add(direction === "next" ? "slide-left-in-prepare" : "slide-right-in-prepare");
+
+            // Форсируем перерисовку DOM браузером (триггер)
+            mainImage.getBoundingClientRect();
+
+            // Включаем синхронизацию миниатюр
+            syncThumbnailActive();
+
+            // Убираем подготовительный класс, запуская плавное возвращение в центр
+            mainImage.classList.remove("slide-left-in-prepare", "slide-right-in-prepare");
+
+            // Разрешаем следующий клик после полного завершения анимации влёта
+            setTimeout(() => {
+                isAnimating = false;
+            }, 200);
+
+        }, 200);
+    };
+
+    // Экспортируем функцию в window, чтобы renderThumbnails мог её вызывать
+    window.__triggerPhotoChange = changePhotoWithAnimation;
+
+    const nextPhoto = () => {
+        if (currentPhotoIndex < photos.length - 1) {
+            currentPhotoIndex++;
+            changePhotoWithAnimation("next");
+        }
+    };
+
+    const prevPhoto = () => {
+        if (currentPhotoIndex > 0) {
+            currentPhotoIndex--;
+            changePhotoWithAnimation("prev");
+        }
+    };
+
+    // ===== КЛИК ПО ЛЕВОЙ / ПРАВОЙ ЧАСТИ =====
+    modal.onclick = (e) => {
+        if (isAnimating) return;
+        const rect = modal.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+
+        if (x < rect.width / 2) {
+            prevPhoto();
+        } else {
+            nextPhoto();
+        }
+    };
+
+    // ===== КЛАВИАТУРА =====
+    if (globalKeyHandler) {
+        document.removeEventListener("keydown", globalKeyHandler);
+    }
+    
+    globalKeyHandler = (e) => {
+        if (isAnimating) return;
+        if (e.key === "ArrowLeft") prevPhoto();
+        if (e.key === "ArrowRight") nextPhoto();
+    };
+
+    document.addEventListener("keydown", globalKeyHandler);
+
+    // ===== СВАЙП (МОБИЛКА) =====
+    let startX = 0;
+
+    modal.ontouchstart = (e) => {
+        startX = e.touches[0].clientX;
+    };
+
+    modal.ontouchend = (e) => {
+        if (isAnimating) return;
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+
+        if (Math.abs(diff) < 40) return;
+
+        if (diff > 0) {
+            nextPhoto();
+        } else {
+            prevPhoto();
+        }
+    };
+}

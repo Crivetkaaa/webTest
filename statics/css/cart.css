@@ -2,7 +2,7 @@
 #cart-icon {
     position: fixed;
     top: 100px;
-    right: 80px;
+    right: 20px; /* было 80px → ломало мобильные */
     cursor: pointer;
     z-index: 10001;
     display: none;
@@ -17,7 +17,7 @@
 #cart-count {
     position: absolute;
     top: -5px;
-    right: -10px;
+    right: -5px; /* чуть внутрь */
     background: #ff4d4d;
     color: white;
     border-radius: 10px;
@@ -33,26 +33,26 @@
     display: none; 
     position: fixed;
     z-index: 10002;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0; /* вместо left/top/width/height */
     background-color: rgba(0, 0, 0, 0.5);
-    /* Центрируем содержимое по обеим осям */
-    display: none; /* JS поменяет на flex */
+
+    /* Центрируем */
     align-items: center;
     justify-content: center;
 }
 
 .cart-modal-content {
     background-color: #fff;
-    margin: 0; /* Убираем авто-отступы */
+    margin: 0;
     padding: 25px;
     border-radius: 12px;
+
     width: 90%;
     max-width: 500px;
-    max-height: 85vh; /* Ограничиваем высоту, чтобы не вылезало за экран */
+
+    max-height: 85vh;
     overflow-y: auto;
+
     position: relative;
     box-sizing: border-box;
 }
@@ -126,25 +126,22 @@ h2 {
 }
 
 /* АДАПТИВ ДЛЯ МОБИЛЬНЫХ */
-@media (max-width: 768px) {
+@media (max-width: 800px) {
     #cart-icon {
-        /* 1. Позиционирование */
-        position: fixed !important; /* !important на случай конфликтов */
-        bottom: 30px !important;
-        right: 20px !important;
-        left: auto !important;   /* Убираем центрирование, если оно было */
-        top: auto !important;    /* Убираем привязку к верху */
-        transform: none !important; /* Убираем смещения типа translate */
+        position: fixed !important;
+        right: 15px !important;
+        bottom: 20px !important; /* норм позиция */
+        left: auto !important;
+        top: auto !important;
 
-        /* 2. Внешний вид кнопки */
-        display: flex !important; /* Гарантируем видимость, если JS его не скрыл */
+        display: flex !important;
         width: 60px;
         height: 60px;
+
         background-color: #ffffff;
         border-radius: 50%;
         box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         
-        /* 3. Центрирование эмодзи внутри круга */
         align-items: center;
         justify-content: center;
         font-size: 28px;
@@ -152,9 +149,95 @@ h2 {
     }
 
     #cart-count {
-        /* Поправляем счетчик, чтобы он не улетел */
         top: 5px;
-        right: 1px;
+        right: 5px;
         padding: 2px 8px;
     }
+}
+
+.cart-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cart-item-title {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+    text-decoration: none;
+    display: block;
+}
+
+.cart-item-sub {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.cart-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cart-controls button {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #ddd;
+    background: #f9f9f9;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.cart-remove {
+    background: none;
+    border: none;
+    color: red;
+    font-size: 18px;
+    cursor: pointer;
+}
+/* Блок согласия на обработку персональных данных */
+.privacy-agreement {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 8px 0 4px 0;
+    user-select: none;
+}
+
+/* Стилизация скрытого системного инпута и самого текста */
+.privacy-agreement input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    margin-top: 1px; /* Выравнивание по высоте первой строки текста */
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.privacy-agreement label {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #555;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.privacy-agreement a {
+    color: #333;
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.privacy-agreement a:hover {
+    color: #000;
 }

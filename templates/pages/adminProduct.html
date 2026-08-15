@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="/statics/css/adminProducts.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Товары</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+<style>
+
+
+</style>
+</head>
+<body>
+    {{template "admin_navbar"}}
+    <div class="filters-bar">
+
+    <select id="category">
+        <option value="">Все категории</option>
+    </select>
+
+    <select id="subcategory">
+        <option value="">Все подкатегории</option>
+    </select>
+
+    <button onclick="refreshProducts()" class="btn refresh-btn">
+        🔄 Обновить
+    </button>
+
+    <button class="btn add-btn" id="addButton">
+        + Добавить
+    </button>
+            <button class="btn category-btn" id="addCategoryButton">
+            + Добавить категорию
+        </button>
+</div>
+    <div id="productCards"></div>
+    <button onclick="addProduct()" id="getProduct">Загрузить ещё</button>
+</div>
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+    </div>
+</div>
+</body>
+
+<script src="/statics/js/adminProduct.js"></script>
+<script src="/statics/js/adminCategory.js"></script>
+</html>

@@ -1,31 +1,38 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
+	"math/big" // Добавили обратно для стандартного веб-сервера
+	"os"
 	"strconv"
 	"strings"
 
 	"webTest/database_folder"
+	"webTest/middleware"
 	"webTest/routers"
+	"webTest/utilit"
 
 	"github.com/gin-gonic/gin"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 )
 
 func setupStatic(r *gin.Engine) {
+	// ИЗМЕНЕНО ДЛЯ VDS: Возвращаем локальный путь к статике
 	r.Static("/statics", "./statics")
 }
 
-func setupRoutes(r *gin.Engine, db *database_folder.DB) {
-	// 1. Статические роуты и группы (Сначала они!)
+func setupRoutes(r *gin.Engine, db *database_folder.DB, bot *tgbotapi.BotAPI, adminID int) {
 	api := r.Group("/api")
 	admin := r.Group("/admin")
 	users := r.Group("/")
-	routers.APIRouters(api, db)
+	routers.APIRouters(api, db, bot, adminID)
 	routers.AdminRouters(admin, db)
 	routers.UsersRouters(users, db)
-
 }
 
 func setupTemplates(r *gin.Engine) {
@@ -53,21 +60,78 @@ func setupTemplates(r *gin.Engine) {
 	}
 
 	r.SetFuncMap(funcMap)
+	// ИЗМЕНЕНО ДЛЯ VDS: Возвращаем локальный путь к шаблонам
 	r.LoadHTMLGlob("templates/**/*.html")
 }
 
+func GenerateRandomPassword(length int) (string, error) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", err
+		}
+		result[i] = letters[num.Int64()]
+	}
+	return string(result), nil
+}
+
 func main() {
+	gin.SetMode(gin.ReleaseMode)
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Предупреждение: .env файл не найден, берутся системные переменные")
+	}
+
+	bot := utilit.Init()
+	adminIDStr := os.Getenv("adminID")
+
+	adminID, err := strconv.Atoi(adminIDStr)
+	if err != nil {
+		log.Fatalf("Admin id is empty: %v", err)
+	}
+
+	if err != nil {
+		log.Fatalf("TG bot not start: %v", err)
+	}
+
 	db, err := database_folder.CreateDB()
 	if err != nil {
 		log.Fatalf("db init error: %v", err)
 	}
 
+	var count int
+	err = db.Db.QueryRow("SELECT COUNT(*) FROM administrator").Scan(&count)
+	if err != nil {
+		panic("Failed to check database state: " + err.Error())
+	}
+
+	if count == 0 {
+		login, err := GenerateRandomPassword(20)
+		if err != nil {
+			log.Fatalf("Login error: %s", err)
+		}
+		password, err := GenerateRandomPassword(20)
+		if err != nil {
+			log.Fatalf("Password error: %s", err)
+		}
+		db.Registration(login, password)
+		// ИЗМЕНЕНО ДЛЯ VDS: Теперь этот вывод вы увидите прямо в консоли при запуске приложения!
+		fmt.Printf("Initial admin created!\nLogin: %s\nPassword: %s\n", login, password)
+	}
+	middleware.InitMiddleware()
+
 	r := gin.Default()
 
 	setupTemplates(r)
 	setupStatic(r)
-	setupRoutes(r, db)
+	setupRoutes(r, db, bot, adminID)
 
 	log.Println("Server started on :8080")
-	r.Run(":8080")
+	err = r.Run(":8080")
+	if err != nil {
+		panic(err)
+	}
 }
